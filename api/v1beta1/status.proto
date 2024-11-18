@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+option go_package = "github.co/aquasecurity/tracee/api/v1beta1";
+
+package tracee.v1beta1;
+
+import "google/protobuf/timestamp.proto";
+message Status {
+    // Main fields
+    StatusInfo status_info = 1;
+    PerformanceSummary performance_summary = 2;
+    EventStats event_stats = 3;
+    PolicySummary policy_summary = 4;
+    ArtifactCaptureStatus artifact_capture_status = 5;
+    ProbeStatus probe_status = 6;
+    StreamSummary stream_summary = 7; // Optional additional section
+}
+
+// General status information
+message StatusInfo {
+    google.protobuf.Timestamp uptime = 1;               // Service uptime
+    string version = 2;              // Service version
+    int32 pid = 3;                   // Process ID
+}
+
+// Performance summary
+message PerformanceSummary {
+    int32 memory_usage = 1;          // Memory usage in MB
+    int32 cpu_usage = 2;             // CPU usage percentage
+    int32 network_latency = 3;       // Network latency in ms
+    int32 average_event_processing_time = 4; // Avg time per event in ms
+}
+
+// Event statistics
+message EventStats {
+    int64 total_events_captured = 1; // Total events captured
+    int64 events_processed = 2;     // Successfully processed events
+    int64 events_dropped = 3;       // Events dropped
+}
+
+// Policy summary
+message PolicySummary {
+    int32 number_of_policies = 1;    // Total number of policies
+}
+
+// Stream summary
+message StreamSummary {
+    int32 active_streams = 1;        // Number of active streams
+}
+
+// Artifact capture status
+message ArtifactCaptureStatus {
+    bool enabled = 1;                // Whether artifact capture is enabled
+    string captured_artifacts = 2;   // Description of captured artifacts
+    string storage_location = 3;     // Storage location for artifacts
+}
+
+// eBPF probe status
+message ProbeStatus {
+    repeated string loaded_probes = 1;       // List of successfully loaded probes
+
+    message FailedProbe {
+        string name = 1;                     // Name of the failed probe
+        string reason = 2;                   // Reason for failure
+    }
+    repeated FailedProbe failed_probes = 2;  // List of failed probes with reasons
+}
