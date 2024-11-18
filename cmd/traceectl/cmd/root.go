@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	pb "github.com/aquasecurity/tracee/api/v1beta1"
@@ -20,7 +21,7 @@ var (
 	}
 
 	rootCmd = &cobra.Command{
-		Use:   "traceectl [flags] [command]",
+		Use:   "trceectl [flags] [options]",
 		Short: "TraceeCtl is a CLI tool for tracee",
 		Long:  "TraceeCtl is the client for the tracee API server.",
 		Run: func(cmd *cobra.Command, args []string) {
@@ -50,7 +51,7 @@ func init() {
 	//no default for tcp, only for unix socket
 	//for tcp <IP:Port>
 	//for unix socket <socket_path>
-	rootCmd.PersistentFlags().StringVar(&serverInfo.ADDR, "server", client.SOCKET, `Server connection path or address.
+	rootCmd.PersistentFlags().StringVar(&serverInfo.ADDR, "server", fmt.Sprintf("%s", client.SOCKET), `Server connection path or address.
 	for unix socket <socket_path> (default: /tmp/tracee.sock)
 	for tcp <IP:Port>`)
 
@@ -91,6 +92,7 @@ var statusCmd = &cobra.Command{
 	Short: "Shows the status of the Tracee Daemon and its components",
 	Long:  "Shows the status of the Tracee Daemon and its components.",
 	Run: func(cmd *cobra.Command, args []string) {
+		displayStatus(cmd, args)
 	},
 }
 
@@ -164,4 +166,22 @@ func displayVersion(cmd *cobra.Command, _ []string) {
 		//display version
 		cmd.Println("Version: ", response.Version)
 	}
+}
+func displayStatus(cmd *cobra.Command, _ []string) {
+	var traceeClient client.ServiceClient
+	if err := traceeClient.NewServiceClient(serverInfo); err != nil {
+		cmd.PrintErrln("Error creating client: ", err)
+		return
+	}
+	defer traceeClient.CloseConnection()
+	//get Status
+	response, err := traceeClient.GetStatus(context.Background(), &pb.GetStatusRequest{})
+
+	if err != nil {
+		cmd.PrintErrln("Error getting Status : ", err)
+		return
+	}
+
+	cmd.Println(response)
+
 }
