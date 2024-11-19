@@ -3,6 +3,10 @@ package grpc
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/golang/protobuf/ptypes/timestamp"
@@ -959,4 +963,83 @@ func getStackAddress(stackAddresses []uint64) []*pb.StackAddress {
 	}
 
 	return out
+}
+
+func (s *TraceeService) GetStatus(ctx context.Context, in *pb.GetStatusRequest) (*pb.GetStatusResponse, error) {
+	//get status info
+	processPid := os.Getpid()
+	uptime, err := getProcessUptime(processPid)
+	if err != nil {
+		return nil, err
+	}
+	statusInfo := &pb.StatusInfo{
+		Uptime:  uptime,
+		Pid:     int32(processPid),
+		Version: version.GetVersion(),
+	}
+	//get performance summary
+	performanceSummary := &pb.PerformanceSummary{}
+	eventStats := &pb.EventStats{}
+	policySummary := &pb.PolicySummary{}
+	artifactCaptureStatus := &pb.ArtifactCaptureStatus{}
+	probeStatus := &pb.ProbeStatus{}
+	streamSummary := &pb.StreamSummary{}
+
+	//return status response
+	return &pb.GetStatusResponse{
+		Status: &pb.Status{
+			StatusInfo:            statusInfo,
+			PerformanceSummary:    performanceSummary,
+			EventStats:            eventStats,
+			PolicySummary:         policySummary,
+			ArtifactCaptureStatus: artifactCaptureStatus,
+			ProbeStatus:           probeStatus,
+			StreamSummary:         streamSummary,
+		},
+	}, nil
+}
+
+// GetProcessUptime calculates the uptime of a process given its PID.
+func getProcessUptime(pid int) (*timestamp.Timestamp, error) {
+	// Read system uptime from /proc/uptime
+	uptimeContent, err := ioutil.ReadFile("/proc/uptime")
+	if err != nil {
+		return nil, fmt.Errorf("failed to read /proc/uptime: %w", err)
+	}
+
+	uptimeParts := strings.Fields(string(uptimeContent))
+	if len(uptimeParts) < 1 {
+		return nil, fmt.Errorf("unexpected format in /proc/uptime")
+	}
+	systemUptimeSeconds, err := strconv.ParseFloat(uptimeParts[0], 64)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse system uptime: %w", err)
+	}
+
+	// Read process stat file from /proc/<pid>/stat
+	statPath := fmt.Sprintf("/proc/%d/stat", pid)
+	statContent, err := ioutil.ReadFile(statPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read %s: %w", statPath, err)
+	}
+
+	statFields := strings.Fields(string(statContent))
+	if len(statFields) < 22 {
+		return nil, fmt.Errorf("unexpected format in %s", statPath)
+	}
+
+	// Process start time (22nd field) in clock ticks
+	startTimeTicks, err := strconv.ParseUint(statFields[21], 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse process start time: %w", err)
+	}
+
+	// Get clock ticks per second
+	ticks := float64(os.Getpagesize()) / 4096.0
+
+	// Process uptime in seconds
+	processStartTimeSeconds := float64(startTimeTicks) / ticks
+	processUptimeSeconds := systemUptimeSeconds - processStartTimeSeconds
+
+	return timestamppb.New(time.Unix(int64(processUptimeSeconds), 0)), nil
 }
