@@ -16,6 +16,7 @@ import (
 	"github.com/aquasecurity/tracee/pkg/cmd/initialize"
 	"github.com/aquasecurity/tracee/pkg/errfmt"
 	"github.com/aquasecurity/tracee/pkg/logger"
+	"github.com/aquasecurity/tracee/pkg/server/grpc/status"
 	"github.com/aquasecurity/tracee/pkg/version"
 )
 
@@ -49,6 +50,7 @@ access to hundreds of events that help you understand how your system behaves.`,
 			}
 		},
 		Run: func(cmd *cobra.Command, args []string) {
+			status.Init()
 			logger.Init(logger.NewDefaultLoggingConfig())
 			initialize.SetLibbpfgoCallbacks()
 

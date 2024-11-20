@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 	"os"
 
 	pb "github.com/aquasecurity/tracee/api/v1beta1"
@@ -51,7 +50,7 @@ func init() {
 	//no default for tcp, only for unix socket
 	//for tcp <IP:Port>
 	//for unix socket <socket_path>
-	rootCmd.PersistentFlags().StringVar(&serverInfo.ADDR, "server", fmt.Sprintf("%s", client.SOCKET), `Server connection path or address.
+	rootCmd.PersistentFlags().StringVar(&serverInfo.ADDR, "server", client.SOCKET, `Server connection path or address.
 	for unix socket <socket_path> (default: /tmp/tracee.sock)
 	for tcp <IP:Port>`)
 

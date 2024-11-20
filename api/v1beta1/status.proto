@@ -4,7 +4,7 @@ option go_package = "github.co/aquasecurity/tracee/api/v1beta1";
 
 package tracee.v1beta1;
 
-import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
 message Status {
     // Main fields
     StatusInfo status_info = 1;
@@ -18,17 +18,15 @@ message Status {
 
 // General status information
 message StatusInfo {
-    google.protobuf.Timestamp uptime = 1;               // Service uptime
+    google.protobuf.Duration uptime = 1;               // Service uptime
     string version = 2;              // Service version
-    int32 pid = 3;                   // Process ID
+    int64 pid = 3;                   // Process ID
 }
 
 // Performance summary
 message PerformanceSummary {
-    int32 memory_usage = 1;          // Memory usage in MB
-    int32 cpu_usage = 2;             // CPU usage percentage
-    int32 network_latency = 3;       // Network latency in ms
-    int32 average_event_processing_time = 4; // Avg time per event in ms
+    int64 memory_usage = 1;          // Memory usage in MB
+    float cpu_usage = 2;             // CPU usage percentage
 }
 
 // Event statistics
@@ -40,19 +38,19 @@ message EventStats {
 
 // Policy summary
 message PolicySummary {
-    int32 number_of_policies = 1;    // Total number of policies
+    int64 number_of_policies = 1;    // Total number of policies
 }
 
 // Stream summary
 message StreamSummary {
-    int32 active_streams = 1;        // Number of active streams
+    int64 active_streams = 1;        // Number of active streams
 }
 
 // Artifact capture status
 message ArtifactCaptureStatus {
     bool enabled = 1;                // Whether artifact capture is enabled
-    string captured_artifacts = 2;   // Description of captured artifacts
-    string storage_location = 3;     // Storage location for artifacts
+    string captured_artifacts = 2;   //TODO:
+    string storage_location = 3;     // work on how the artifect ill look
 }
 
 // eBPF probe status
