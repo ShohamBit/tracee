@@ -12,6 +12,10 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 )
 
+const (
+	CLK_TCK = 100
+)
+
 var (
 	startTime time.Time
 )
@@ -19,8 +23,6 @@ var (
 func Init() {
 	startTime = time.Now()
 }
-
-// GetStatusInfo returns the current status information
 func GetStatusInfo() *pb.StatusInfo {
 	return &pb.StatusInfo{
 		Pid:     getPid(),
@@ -29,17 +31,14 @@ func GetStatusInfo() *pb.StatusInfo {
 	}
 }
 
-// Get uptime as a time.Duration
 func getUptime() time.Duration {
 	return time.Since(startTime)
 }
 
-// Get the PID of the process
 func getPid() int64 {
-	return int64(os.Getpid()) // Ensure compatibility with int32
+	return int64(os.Getpid())
 }
 
-// GetPerformanceSummary returns performance-related data
 func GetPerformanceSummary() *pb.PerformanceSummary {
 	return &pb.PerformanceSummary{
 		MemoryUsage: getMemoryUsage(),
@@ -47,24 +46,19 @@ func GetPerformanceSummary() *pb.PerformanceSummary {
 	}
 }
 
-// Mocked functions for performance metrics
 func getMemoryUsage() int64 {
 	var mem runtime.MemStats
 	runtime.ReadMemStats(&mem)
-	return int64(mem.Alloc/2 ^ 20)
+	return int64(mem.Sys / (1024 * 1024))
 }
 
 func getCpuUsage() float32 {
-	// Read CPU times from /proc/self/stat
 	readCPUStat := func() (float64, error) {
 		data, err := os.ReadFile("/proc/self/stat")
 		if err != nil {
 			return 0, err
 		}
-
-		// Parse the fields from /proc/self/stat
 		fields := strings.Fields(string(data))
-
 		// Fields[13] (utime) and Fields[14] (stime) are process CPU times in clock ticks
 		utime, err := strconv.ParseFloat(fields[13], 64)
 		if err != nil {
@@ -74,39 +68,23 @@ func getCpuUsage() float32 {
 		if err != nil {
 			return 0, err
 		}
-
-		// Total CPU time used by the process
 		return utime + stime, nil
 	}
-
-	// Get initial CPU time and wall clock time
 	startCPU, _ := readCPUStat()
 	startTime := time.Now()
-
-	// Wait for an interval
 	interval := 1 * time.Second
 	time.Sleep(interval)
 
-	// Get CPU time and wall clock time again
 	endCPU, _ := readCPUStat()
 	endTime := time.Now()
 
 	// Calculate CPU usage percentage
+	//cpu usage = (cpu time used / total time) / ticks
 	cpuTimeUsed := endCPU - startCPU
 	totalTime := endTime.Sub(startTime).Seconds()
-	cpuUsage := (cpuTimeUsed / totalTime) * 100
+	cpuUsage := (cpuTimeUsed / totalTime) / CLK_TCK * 100 //convert to percentages
 
 	return float32(cpuUsage)
-}
-
-func getNetworkLatency() int64 {
-	// Placeholder: Replace with actual latency logic
-	return 10 // Example: 10 ms
-}
-
-func getAverageEventProcessingTime() int32 {
-	// Placeholder: Replace with actual event processing time logic
-	return 15 // Example: 15 ms
 }
 
 // GetEventStats returns event statistics
