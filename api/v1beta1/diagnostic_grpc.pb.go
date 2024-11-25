@@ -22,6 +22,7 @@ const (
 	DiagnosticService_GetMetrics_FullMethodName     = "/tracee.v1beta1.DiagnosticService/GetMetrics"
 	DiagnosticService_ChangeLogLevel_FullMethodName = "/tracee.v1beta1.DiagnosticService/ChangeLogLevel"
 	DiagnosticService_GetStacktrace_FullMethodName  = "/tracee.v1beta1.DiagnosticService/GetStacktrace"
+	DiagnosticService_GetStatus_FullMethodName      = "/tracee.v1beta1.DiagnosticService/GetStatus"
 )
 
 // DiagnosticServiceClient is the client API for DiagnosticService service.
@@ -31,6 +32,7 @@ type DiagnosticServiceClient interface {
 	GetMetrics(ctx context.Context, in *GetMetricsRequest, opts ...grpc.CallOption) (*GetMetricsResponse, error)
 	ChangeLogLevel(ctx context.Context, in *ChangeLogLevelRequest, opts ...grpc.CallOption) (*ChangeLogLevelResponse, error)
 	GetStacktrace(ctx context.Context, in *GetStacktraceRequest, opts ...grpc.CallOption) (*GetStacktraceResponse, error)
+	GetStatus(ctx context.Context, in *GetStatusRequest, opts ...grpc.CallOption) (*GetStatusResponse, error)
 }
 
 type diagnosticServiceClient struct {
@@ -71,6 +73,16 @@ func (c *diagnosticServiceClient) GetStacktrace(ctx context.Context, in *GetStac
 	return out, nil
 }
 
+func (c *diagnosticServiceClient) GetStatus(ctx context.Context, in *GetStatusRequest, opts ...grpc.CallOption) (*GetStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetStatusResponse)
+	err := c.cc.Invoke(ctx, DiagnosticService_GetStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DiagnosticServiceServer is the server API for DiagnosticService service.
 // All implementations must embed UnimplementedDiagnosticServiceServer
 // for forward compatibility.
@@ -78,6 +90,7 @@ type DiagnosticServiceServer interface {
 	GetMetrics(context.Context, *GetMetricsRequest) (*GetMetricsResponse, error)
 	ChangeLogLevel(context.Context, *ChangeLogLevelRequest) (*ChangeLogLevelResponse, error)
 	GetStacktrace(context.Context, *GetStacktraceRequest) (*GetStacktraceResponse, error)
+	GetStatus(context.Context, *GetStatusRequest) (*GetStatusResponse, error)
 	mustEmbedUnimplementedDiagnosticServiceServer()
 }
 
@@ -96,6 +109,9 @@ func (UnimplementedDiagnosticServiceServer) ChangeLogLevel(context.Context, *Cha
 }
 func (UnimplementedDiagnosticServiceServer) GetStacktrace(context.Context, *GetStacktraceRequest) (*GetStacktraceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetStacktrace not implemented")
+}
+func (UnimplementedDiagnosticServiceServer) GetStatus(context.Context, *GetStatusRequest) (*GetStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetStatus not implemented")
 }
 func (UnimplementedDiagnosticServiceServer) mustEmbedUnimplementedDiagnosticServiceServer() {}
 func (UnimplementedDiagnosticServiceServer) testEmbeddedByValue()                           {}
@@ -172,6 +188,24 @@ func _DiagnosticService_GetStacktrace_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DiagnosticService_GetStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DiagnosticServiceServer).GetStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DiagnosticService_GetStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DiagnosticServiceServer).GetStatus(ctx, req.(*GetStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // DiagnosticService_ServiceDesc is the grpc.ServiceDesc for DiagnosticService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -190,6 +224,10 @@ var DiagnosticService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetStacktrace",
 			Handler:    _DiagnosticService_GetStacktrace_Handler,
+		},
+		{
+			MethodName: "GetStatus",
+			Handler:    _DiagnosticService_GetStatus_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

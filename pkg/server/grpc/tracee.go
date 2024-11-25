@@ -9,7 +9,6 @@ import (
 	tracee "github.com/aquasecurity/tracee/pkg/ebpf"
 	"github.com/aquasecurity/tracee/pkg/events"
 	"github.com/aquasecurity/tracee/pkg/logger"
-	"github.com/aquasecurity/tracee/pkg/status"
 	"github.com/aquasecurity/tracee/pkg/streams"
 	"github.com/aquasecurity/tracee/pkg/version"
 	"github.com/aquasecurity/tracee/types/trace"
@@ -959,28 +958,4 @@ func getStackAddress(stackAddresses []uint64) []*pb.StackAddress {
 	}
 
 	return out
-}
-
-func (s *TraceeService) GetStatus(ctx context.Context, in *pb.GetStatusRequest) (*pb.GetStatusResponse, error) {
-	// Retrieve all components of the status dynamically
-	statusInfo := status.GetStatusInfo()
-	performanceSummary := status.GetPerformanceSummary()
-	eventStats := status.GetEventStats()
-	policySummary := status.GetPolicySummary()
-	artifactCaptureStatus := status.GetArtifactCaptureStatus()
-	probeStatus := status.GetProbeStatus()
-	streamSummary := status.GetStreamSummary()
-
-	// Populate and return the response
-	return &pb.GetStatusResponse{
-		Status: &pb.Status{
-			StatusInfo:            statusInfo,
-			PerformanceSummary:    performanceSummary,
-			EventStats:            eventStats,
-			PolicySummary:         policySummary,
-			ArtifactCaptureStatus: artifactCaptureStatus,
-			ProbeStatus:           probeStatus,
-			StreamSummary:         streamSummary,
-		},
-	}, nil
 }

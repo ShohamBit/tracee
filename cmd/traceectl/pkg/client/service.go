@@ -32,10 +32,6 @@ func (tc *ServiceClient) CloseConnection() {
 func (tc *ServiceClient) GetVersion(ctx context.Context, req *pb.GetVersionRequest) (*pb.GetVersionResponse, error) {
 	return tc.client.GetVersion(ctx, req)
 }
-func (tc *ServiceClient) GetStatus(ctx context.Context, req *pb.GetStatusRequest) (*pb.GetStatusResponse, error) {
-	return tc.client.GetStatus(ctx, req)
-}
-
 func (tc *ServiceClient) EnableEvent(ctx context.Context, req *pb.EnableEventRequest) (*pb.EnableEventResponse, error) {
 	return tc.client.EnableEvent(ctx, req)
 }

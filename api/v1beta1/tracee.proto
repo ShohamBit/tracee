@@ -6,7 +6,6 @@ package tracee.v1beta1;
 
 import "google/protobuf/field_mask.proto";
 import "api/v1beta1/event.proto";
-import "api/v1beta1/status.proto";
 import "api/v1beta1/definition.proto";
 
 message GetVersionRequest {
@@ -49,13 +48,7 @@ message StreamEventsRequest {
 message StreamEventsResponse {
     Event event = 1;
 }
-message GetStatusRequest{
-}
-message GetStatusResponse{
-    Status status = 1;
-    
 
-}
 service TraceeService {
     rpc GetEventDefinitions(GetEventDefinitionsRequest) returns (GetEventDefinitionsResponse);
     rpc StreamEvents(StreamEventsRequest) returns (stream StreamEventsResponse);
@@ -64,5 +57,5 @@ service TraceeService {
     rpc DisableEvent(DisableEventRequest) returns (DisableEventResponse);
 
     rpc GetVersion(GetVersionRequest) returns (GetVersionResponse);
-    rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
+
 }

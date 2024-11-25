@@ -7,6 +7,7 @@ import (
 	pb "github.com/aquasecurity/tracee/api/v1beta1"
 	tracee "github.com/aquasecurity/tracee/pkg/ebpf"
 	"github.com/aquasecurity/tracee/pkg/logger"
+	"github.com/aquasecurity/tracee/pkg/status"
 )
 
 type DiagnosticService struct {
@@ -72,4 +73,9 @@ func stack() []byte {
 		}
 		buf = make([]byte, 2*len(buf))
 	}
+}
+
+func (s *DiagnosticService) GetStatus(ctx context.Context, in *pb.GetStatusRequest) (*pb.GetStatusResponse, error) {
+	// Retrieve all components of the status dynamically
+	return status.GetStatus(s.tracee)
 }

@@ -151,15 +151,13 @@ func displayVersion(cmd *cobra.Command, _ []string) {
 	}
 }
 func displayStatus(cmd *cobra.Command, _ []string) {
-	var traceeClient client.ServiceClient
-	if err := traceeClient.NewServiceClient(serverInfo); err != nil {
+	var traceeClient client.DiagnosticClient
+	if err := traceeClient.NewDiagnosticClient(serverInfo); err != nil {
 		cmd.PrintErrln("Error creating client: ", err)
 		return
 	}
 	defer traceeClient.CloseConnection()
-	//get Status
 	response, err := traceeClient.GetStatus(context.Background(), &pb.GetStatusRequest{})
-
 	if err != nil {
 		cmd.PrintErrln("Error getting Status : ", err)
 		return

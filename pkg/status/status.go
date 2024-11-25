@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	tracee "github.com/aquasecurity/tracee/pkg/ebpf"
+
 	pb "github.com/aquasecurity/tracee/api/v1beta1"
 	"github.com/aquasecurity/tracee/pkg/version"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -23,7 +25,30 @@ var (
 func Init() {
 	startTime = time.Now()
 }
-func GetStatusInfo() *pb.StatusInfo {
+func GetStatus(tracee *tracee.Tracee) (*pb.GetStatusResponse, error) {
+
+	statusInfo := getStatusInfo()
+	performanceSummary := getPerformanceSummary()
+	eventStats := getEventStats(tracee)
+	policySummary := getPolicySummary()
+	artifactCaptureStatus := getArtifactCaptureStatus()
+	probeStatus := getProbeStatus()
+	streamSummary := getStreamSummary()
+
+	// Populate and return the response
+	return &pb.GetStatusResponse{
+		Status: &pb.Status{
+			StatusInfo:            statusInfo,
+			PerformanceSummary:    performanceSummary,
+			EventStats:            eventStats,
+			PolicySummary:         policySummary,
+			ArtifactCaptureStatus: artifactCaptureStatus,
+			ProbeStatus:           probeStatus,
+			StreamSummary:         streamSummary,
+		},
+	}, nil
+}
+func getStatusInfo() *pb.StatusInfo {
 	return &pb.StatusInfo{
 		Pid:     getPid(),
 		Uptime:  durationpb.New(getUptime()),
@@ -39,7 +64,7 @@ func getPid() int64 {
 	return int64(os.Getpid())
 }
 
-func GetPerformanceSummary() *pb.PerformanceSummary {
+func getPerformanceSummary() *pb.PerformanceSummary {
 	return &pb.PerformanceSummary{
 		MemoryUsage: getMemoryUsage(),
 		CpuUsage:    getCpuUsage(),
@@ -88,23 +113,23 @@ func getCpuUsage() float32 {
 }
 
 // GetEventStats returns event statistics
-func GetEventStats() *pb.EventStats {
+func getEventStats(tracee *tracee.Tracee) *pb.EventStats {
 	return &pb.EventStats{
-		TotalEventsCaptured: 15384,
-		EventsProcessed:     14212,
-		EventsDropped:       1172,
+		TotalEventsCaptured: int64(tracee.Stats().EventCount.Get()),
+		EventsProcessed:     0, //change process and drop to more acuate thing
+		EventsDropped:       0,
 	}
 }
 
 // GetPolicySummary returns policy summary information
-func GetPolicySummary() *pb.PolicySummary {
+func getPolicySummary() *pb.PolicySummary {
 	return &pb.PolicySummary{
-		NumberOfPolicies: 2,
+		NumberOfPolicies: 0, //tracee doesn't support policy
 	}
 }
 
 // GetArtifactCaptureStatus returns artifact capture details
-func GetArtifactCaptureStatus() *pb.ArtifactCaptureStatus {
+func getArtifactCaptureStatus() *pb.ArtifactCaptureStatus {
 	return &pb.ArtifactCaptureStatus{
 		Enabled:           true,
 		CapturedArtifacts: "3 network packets, 1 file write",
@@ -113,7 +138,7 @@ func GetArtifactCaptureStatus() *pb.ArtifactCaptureStatus {
 }
 
 // GetProbeStatus returns the status of eBPF probes
-func GetProbeStatus() *pb.ProbeStatus {
+func getProbeStatus() *pb.ProbeStatus {
 	return &pb.ProbeStatus{
 		LoadedProbes: []string{"open", "openat", "execve"}, // Replace with actual probe names
 		FailedProbes: []*pb.ProbeStatus_FailedProbe{
@@ -126,7 +151,7 @@ func GetProbeStatus() *pb.ProbeStatus {
 }
 
 // GetStreamSummary returns active stream details
-func GetStreamSummary() *pb.StreamSummary {
+func getStreamSummary() *pb.StreamSummary {
 	return &pb.StreamSummary{
 		ActiveStreams: 5, // Replace with actual active stream count
 	}

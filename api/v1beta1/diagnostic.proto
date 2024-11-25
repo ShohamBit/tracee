@@ -4,6 +4,8 @@ option go_package = "github.co/aquasecurity/tracee/api/v1beta1";
 
 package tracee.v1beta1;
 
+import "api/v1beta1/status.proto";
+
 message GetMetricsRequest {
 }
 
@@ -43,8 +45,15 @@ message GetStacktraceResponse {
 	bytes Stacktrace = 1;
 }
 
+message GetStatusRequest{
+}
+
+message GetStatusResponse{
+    Status status = 1;
+}
 service DiagnosticService {
     rpc GetMetrics(GetMetricsRequest) returns (GetMetricsResponse);
     rpc ChangeLogLevel(ChangeLogLevelRequest) returns (ChangeLogLevelResponse);
     rpc GetStacktrace(GetStacktraceRequest) returns (GetStacktraceResponse);
+    rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
 }

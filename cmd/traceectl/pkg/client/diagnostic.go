@@ -32,3 +32,7 @@ func (tc *DiagnosticClient) CloseConnection() {
 func (tc *DiagnosticClient) GetMetrics(ctx context.Context, req *pb.GetMetricsRequest) (*pb.GetMetricsResponse, error) {
 	return tc.client.GetMetrics(ctx, req)
 }
+
+func (tc *DiagnosticClient) GetStatus(ctx context.Context, req *pb.GetStatusRequest) (*pb.GetStatusResponse, error) {
+	return tc.client.GetStatus(ctx, req)
+}

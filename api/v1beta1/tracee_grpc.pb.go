@@ -24,7 +24,6 @@ const (
 	TraceeService_EnableEvent_FullMethodName         = "/tracee.v1beta1.TraceeService/EnableEvent"
 	TraceeService_DisableEvent_FullMethodName        = "/tracee.v1beta1.TraceeService/DisableEvent"
 	TraceeService_GetVersion_FullMethodName          = "/tracee.v1beta1.TraceeService/GetVersion"
-	TraceeService_GetStatus_FullMethodName           = "/tracee.v1beta1.TraceeService/GetStatus"
 )
 
 // TraceeServiceClient is the client API for TraceeService service.
@@ -36,7 +35,6 @@ type TraceeServiceClient interface {
 	EnableEvent(ctx context.Context, in *EnableEventRequest, opts ...grpc.CallOption) (*EnableEventResponse, error)
 	DisableEvent(ctx context.Context, in *DisableEventRequest, opts ...grpc.CallOption) (*DisableEventResponse, error)
 	GetVersion(ctx context.Context, in *GetVersionRequest, opts ...grpc.CallOption) (*GetVersionResponse, error)
-	GetStatus(ctx context.Context, in *GetStatusRequest, opts ...grpc.CallOption) (*GetStatusResponse, error)
 }
 
 type traceeServiceClient struct {
@@ -106,16 +104,6 @@ func (c *traceeServiceClient) GetVersion(ctx context.Context, in *GetVersionRequ
 	return out, nil
 }
 
-func (c *traceeServiceClient) GetStatus(ctx context.Context, in *GetStatusRequest, opts ...grpc.CallOption) (*GetStatusResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetStatusResponse)
-	err := c.cc.Invoke(ctx, TraceeService_GetStatus_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // TraceeServiceServer is the server API for TraceeService service.
 // All implementations must embed UnimplementedTraceeServiceServer
 // for forward compatibility.
@@ -125,7 +113,6 @@ type TraceeServiceServer interface {
 	EnableEvent(context.Context, *EnableEventRequest) (*EnableEventResponse, error)
 	DisableEvent(context.Context, *DisableEventRequest) (*DisableEventResponse, error)
 	GetVersion(context.Context, *GetVersionRequest) (*GetVersionResponse, error)
-	GetStatus(context.Context, *GetStatusRequest) (*GetStatusResponse, error)
 	mustEmbedUnimplementedTraceeServiceServer()
 }
 
@@ -150,9 +137,6 @@ func (UnimplementedTraceeServiceServer) DisableEvent(context.Context, *DisableEv
 }
 func (UnimplementedTraceeServiceServer) GetVersion(context.Context, *GetVersionRequest) (*GetVersionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetVersion not implemented")
-}
-func (UnimplementedTraceeServiceServer) GetStatus(context.Context, *GetStatusRequest) (*GetStatusResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetStatus not implemented")
 }
 func (UnimplementedTraceeServiceServer) mustEmbedUnimplementedTraceeServiceServer() {}
 func (UnimplementedTraceeServiceServer) testEmbeddedByValue()                       {}
@@ -258,24 +242,6 @@ func _TraceeService_GetVersion_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
-func _TraceeService_GetStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetStatusRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(TraceeServiceServer).GetStatus(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: TraceeService_GetStatus_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TraceeServiceServer).GetStatus(ctx, req.(*GetStatusRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // TraceeService_ServiceDesc is the grpc.ServiceDesc for TraceeService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -298,10 +264,6 @@ var TraceeService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetVersion",
 			Handler:    _TraceeService_GetVersion_Handler,
-		},
-		{
-			MethodName: "GetStatus",
-			Handler:    _TraceeService_GetStatus_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
