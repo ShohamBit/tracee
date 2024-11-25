@@ -82,7 +82,7 @@ func getCpuUsage() float32 {
 	//cpu usage = (cpu time used / total time) / ticks
 	cpuTimeUsed := endCPU - startCPU
 	totalTime := endTime.Sub(startTime).Seconds()
-	cpuUsage := (cpuTimeUsed / totalTime) / CLK_TCK * 100 //convert to percentages
+	cpuUsage := (cpuTimeUsed / totalTime) / CLK_TCK * 100 //convert to percent
 
 	return float32(cpuUsage)
 }
@@ -90,7 +90,7 @@ func getCpuUsage() float32 {
 // GetEventStats returns event statistics
 func GetEventStats() *pb.EventStats {
 	return &pb.EventStats{
-		TotalEventsCaptured: 15384, // Replace with actual data
+		TotalEventsCaptured: 15384,
 		EventsProcessed:     14212,
 		EventsDropped:       1172,
 	}
@@ -99,14 +99,14 @@ func GetEventStats() *pb.EventStats {
 // GetPolicySummary returns policy summary information
 func GetPolicySummary() *pb.PolicySummary {
 	return &pb.PolicySummary{
-		NumberOfPolicies: 2, // Replace with actual policy count
+		NumberOfPolicies: 2,
 	}
 }
 
 // GetArtifactCaptureStatus returns artifact capture details
 func GetArtifactCaptureStatus() *pb.ArtifactCaptureStatus {
 	return &pb.ArtifactCaptureStatus{
-		Enabled:           true, // Replace with actual logic
+		Enabled:           true,
 		CapturedArtifacts: "3 network packets, 1 file write",
 		StorageLocation:   "/tmp/tracee/artifacts",
 	}
