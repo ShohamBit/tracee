@@ -72,7 +72,7 @@ access to hundreds of events that help you understand how your system behaves.`,
 	}
 )
 
-func initCmd() error {
+func init() {
 	rootCmd.SetOut(os.Stdout)
 	rootCmd.SetErr(os.Stderr)
 
@@ -373,10 +373,9 @@ func checkConfigFlag() {
 	}
 }
 
-func Execute() error {
-	if err := initCmd(); err != nil {
-		return err
+func Execute() {
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
 	}
-
-	return rootCmd.Execute()
 }
