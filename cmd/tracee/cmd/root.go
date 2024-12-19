@@ -19,34 +19,12 @@ import (
 )
 
 var (
-	cfgFileFlag string
-	helpFlag    bool
-
-	rootCmd = &cobra.Command{
+	configFlag string
+	rootCmd    = &cobra.Command{
 		Use:   "tracee",
 		Short: "Trace OS events and syscalls using eBPF",
 		Long: `Tracee uses eBPF technology to tap into your system and give you
 access to hundreds of events that help you understand how your system behaves.`,
-		DisableFlagParsing: true, // in order to have fine grained control over flags parsing
-		PreRun: func(cmd *cobra.Command, args []string) {
-			if len(args) > 0 {
-				// parse all flags
-				if err := cmd.Flags().Parse(args); err != nil {
-					fmt.Fprintf(os.Stderr, "Error: %s\n", err)
-					fmt.Fprintf(os.Stderr, "Run 'tracee --help' for usage.\n")
-					os.Exit(1)
-				}
-
-				if helpFlag {
-					if err := cmd.Help(); err != nil {
-						fmt.Fprintf(os.Stderr, "Error: %s\n", err)
-						os.Exit(1)
-					}
-					os.Exit(0)
-				}
-				checkConfigFlag()
-			}
-		},
 		Run: func(cmd *cobra.Command, args []string) {
 			logger.Init(logger.NewDefaultLoggingConfig())
 			initialize.SetLibbpfgoCallbacks()
@@ -72,27 +50,36 @@ access to hundreds of events that help you understand how your system behaves.`,
 )
 
 func init() {
+	cobra.OnInitialize(initConfig)
+	rootCmd.PersistentFlags().StringVar(
+		&configFlag,
+		"config",
+		"",
+		"Global config file (see documentation)",
+	)
+	viper.BindPFlag("config", rootCmd.PersistentFlags().Lookup("config"))
 
 }
 
-func checkConfigFlag() {
-	if cfgFileFlag == "" {
+func initConfig() {
+	//if config file flag not set
+	if configFlag == "" {
 		return
 	}
-
-	cfgFile, err := filepath.Abs(cfgFileFlag)
+	//Get config file path
+	configFile, err := filepath.Abs(configFlag)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", errfmt.WrapError(err))
 		os.Exit(1)
 	}
-
-	_, err = os.Stat(cfgFile)
-	if err != nil {
+	//Check for errors
+	if _, err = os.Stat(configFile); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", errfmt.WrapError(err))
 		os.Exit(1)
 	}
-
-	viper.SetConfigFile(cfgFile)
+	//Set config file
+	viper.SetConfigFile(configFile)
+	viper.AutomaticEnv()
 	if err := viper.ReadInConfig(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", errfmt.WrapError(err))
 		os.Exit(1)
