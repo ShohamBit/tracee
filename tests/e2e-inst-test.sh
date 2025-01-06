@@ -153,7 +153,7 @@ for TEST in $TESTS; do
                         --signatures-dir "$SIG_DIR" \
                         --scope comm=echo,mv,ls,tracee,proctreetester,ping,ds_writer,fsnotify_tester,process_execute,tracee-ebpf,writev,set_fs_pwd.sh,sys_src_tester \
                         --dnscache enable \
-                        --grpc-listen-addr unix:/tmp/tracee.sock \
+                        --server grpc.address=unix:/tmp/tracee.sock \
                         --events "$TEST""
     
     # Some tests might need event parameters
