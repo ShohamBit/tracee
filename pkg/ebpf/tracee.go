@@ -414,7 +414,7 @@ func (t *Tracee) Init(ctx gocontext.Context) error {
 
 	// Initialize event derivation logic
 
-	err = t.initDerivationTable()
+	err = t.initDerivationTable(t.createDeriveEventsTable())
 	if err != nil {
 		return errfmt.Errorf("error initializing event derivation map: %v", err)
 	}
@@ -576,71 +576,56 @@ func (t *Tracee) initTailCall(tailCall events.TailCall) error {
 // initDerivationTable initializes tracee's events.DerivationTable. For each
 // event, represented through its ID, we declare to which other events it can be
 // derived and the corresponding function to derive into that Event.
-func (t *Tracee) initDerivationTable() error {
-	shouldSubmit := func(id events.ID) func() bool {
-		return func() bool { return t.policyManager.IsEventToSubmit(id) }
-	}
-	symbolsCollisions := derive.SymbolsCollision(t.contSymbolsLoader, t.policyManager)
-
+func (t *Tracee) createDeriveEventsTable() derive.Table {
 	executeFailedGen, err := derive.InitProcessExecuteFailedGenerator()
 	if err != nil {
 		logger.Errorw("failed to init derive function for ProcessExecuteFiled", "error", err)
 		return nil
 	}
-
-	t.eventDerivations = derive.Table{
+	return derive.Table{
 		events.CgroupMkdir: {
 			events.ContainerCreate: {
-				Enabled:        shouldSubmit(events.ContainerCreate),
 				DeriveFunction: derive.ContainerCreate(t.containers),
 			},
 		},
 		events.CgroupRmdir: {
 			events.ContainerRemove: {
-				Enabled:        shouldSubmit(events.ContainerRemove),
 				DeriveFunction: derive.ContainerRemove(t.containers),
 			},
 		},
 		events.SyscallTableCheck: {
 			events.HookedSyscall: {
-				Enabled:        shouldSubmit(events.SyscallTableCheck),
 				DeriveFunction: derive.DetectHookedSyscall(t.kernelSymbols),
 			},
 		},
 		events.PrintNetSeqOps: {
 			events.HookedSeqOps: {
-				Enabled:        shouldSubmit(events.HookedSeqOps),
 				DeriveFunction: derive.HookedSeqOps(t.kernelSymbols),
 			},
 		},
 		events.HiddenKernelModuleSeeker: {
 			events.HiddenKernelModule: {
-				Enabled:        shouldSubmit(events.HiddenKernelModuleSeeker),
 				DeriveFunction: derive.HiddenKernelModule(),
 			},
 		},
 		events.SharedObjectLoaded: {
 			events.SymbolsLoaded: {
-				Enabled: shouldSubmit(events.SymbolsLoaded),
 				DeriveFunction: derive.SymbolsLoaded(
 					t.contSymbolsLoader,
 					t.policyManager,
 				),
 			},
 			events.SymbolsCollision: {
-				Enabled:        shouldSubmit(events.SymbolsCollision),
-				DeriveFunction: symbolsCollisions,
+				DeriveFunction: derive.SymbolsCollision(t.contSymbolsLoader, t.policyManager),
 			},
 		},
 		events.SchedProcessExec: {
 			events.SymbolsCollision: {
-				Enabled:        shouldSubmit(events.SymbolsCollision),
-				DeriveFunction: symbolsCollisions,
+				DeriveFunction: derive.SymbolsCollision(t.contSymbolsLoader, t.policyManager),
 			},
 		},
 		events.SecuritySocketConnect: {
 			events.NetTCPConnect: {
-				Enabled: shouldSubmit(events.NetTCPConnect),
 				DeriveFunction: derive.NetTCPConnect(
 					t.dnsCache,
 				),
@@ -648,13 +633,11 @@ func (t *Tracee) initDerivationTable() error {
 		},
 		events.ExecuteFinished: {
 			events.ProcessExecuteFailed: {
-				Enabled:        shouldSubmit(events.ProcessExecuteFailed),
 				DeriveFunction: executeFailedGen.ProcessExecuteFailed(),
 			},
 		},
 		events.ProcessExecuteFailedInternal: {
 			events.ProcessExecuteFailed: {
-				Enabled:        shouldSubmit(events.ProcessExecuteFailed),
 				DeriveFunction: executeFailedGen.ProcessExecuteFailed(),
 			},
 		},
@@ -663,63 +646,51 @@ func (t *Tracee) initDerivationTable() error {
 		//
 		events.NetPacketIPBase: {
 			events.NetPacketIPv4: {
-				Enabled:        shouldSubmit(events.NetPacketIPv4),
 				DeriveFunction: derive.NetPacketIPv4(),
 			},
 			events.NetPacketIPv6: {
-				Enabled:        shouldSubmit(events.NetPacketIPv6),
 				DeriveFunction: derive.NetPacketIPv6(),
 			},
 		},
 		events.NetPacketTCPBase: {
 			events.NetPacketTCP: {
-				Enabled:        shouldSubmit(events.NetPacketTCP),
 				DeriveFunction: derive.NetPacketTCP(),
 			},
 		},
 		events.NetPacketUDPBase: {
 			events.NetPacketUDP: {
-				Enabled:        shouldSubmit(events.NetPacketUDP),
 				DeriveFunction: derive.NetPacketUDP(),
 			},
 		},
 		events.NetPacketICMPBase: {
 			events.NetPacketICMP: {
-				Enabled:        shouldSubmit(events.NetPacketICMP),
 				DeriveFunction: derive.NetPacketICMP(),
 			},
 		},
 		events.NetPacketICMPv6Base: {
 			events.NetPacketICMPv6: {
-				Enabled:        shouldSubmit(events.NetPacketICMPv6),
 				DeriveFunction: derive.NetPacketICMPv6(),
 			},
 		},
 		events.NetPacketDNSBase: {
 			events.NetPacketDNS: {
-				Enabled:        shouldSubmit(events.NetPacketDNS),
 				DeriveFunction: derive.NetPacketDNS(),
 			},
 			events.NetPacketDNSRequest: {
-				Enabled:        shouldSubmit(events.NetPacketDNSRequest),
 				DeriveFunction: derive.NetPacketDNSRequest(),
 			},
 			events.NetPacketDNSResponse: {
-				Enabled:        shouldSubmit(events.NetPacketDNSResponse),
 				DeriveFunction: derive.NetPacketDNSResponse(),
 			},
 		},
 		events.NetPacketHTTPBase: {
 			events.NetPacketHTTP: {
-				Enabled:        shouldSubmit(events.NetPacketHTTP),
 				DeriveFunction: derive.NetPacketHTTP(),
 			},
 			events.NetPacketHTTPRequest: {
-				Enabled:        shouldSubmit(events.NetPacketHTTPRequest),
 				DeriveFunction: derive.NetPacketHTTPRequest(),
 			},
 			events.NetPacketHTTPResponse: {
-				Enabled:        shouldSubmit(events.NetPacketHTTPResponse),
 				DeriveFunction: derive.NetPacketHTTPResponse(),
 			},
 		},
@@ -728,20 +699,31 @@ func (t *Tracee) initDerivationTable() error {
 		//
 		events.NetPacketFlow: {
 			events.NetFlowTCPBegin: {
-				Enabled: shouldSubmit(events.NetFlowTCPBegin),
 				DeriveFunction: derive.NetFlowTCPBegin(
 					t.dnsCache,
 				),
 			},
 			events.NetFlowTCPEnd: {
-				Enabled: shouldSubmit(events.NetFlowTCPEnd),
 				DeriveFunction: derive.NetFlowTCPEnd(
 					t.dnsCache,
 				),
 			},
 		},
 	}
+}
 
+func (t *Tracee) initDerivationTable(deriveEventsTable derive.Table) error {
+
+	t.eventDerivations = derive.Table{}
+	for deriveEvent := range deriveEventsTable {
+		for event := range deriveEventsTable[deriveEvent] {
+			if t.policyManager.IsEventToSubmit(event) {
+				t.eventDerivations.Register(deriveEvent, event, deriveEventsTable[deriveEvent][event].DeriveFunction)
+			}
+		}
+	}
+	// fmt.Println(deriveEventsTable)
+	// fmt.Println(t.eventDerivations)
 	return nil
 }
 

@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"fmt"
 	"slices"
 	"strconv"
 	"sync"
+	timetime "time"
 	"unsafe"
 
 	"github.com/aquasecurity/tracee/pkg/bufferdecoder"
@@ -506,16 +508,29 @@ func (t *Tracee) deriveEvents(ctx context.Context, in <-chan *trace.Event) (
 ) {
 	out := make(chan *trace.Event, t.config.PipelineChannelSize)
 	errc := make(chan error, 1)
-
+	var times int = 0
+	var timer timetime.Duration = 0
 	go func() {
 		defer close(out)
 		defer close(errc)
 
 		for {
+			if times%10000 == 0 && times != 0 {
+				fmt.Printf("performance: %f\n", timer.Seconds()/float64(times)*10000)
+			}
 			select {
 			case event := <-in:
+				times++
+				stime := timetime.Now()
 				if event == nil {
+					timer += timetime.Since(stime)
 					continue // might happen during initialization (ctrl+c seg faults)
+				}
+				if !t.eventDerivations.HasDerivedEvent(events.ID(event.EventID)) {
+					// fmt.Printf("doesnt have derivitive")
+					//fmt.Println(event.EventName)
+					timer += timetime.Since(stime)
+					continue
 				}
 
 				// Get a copy of our event before sending it down the pipeline. This is
@@ -556,6 +571,7 @@ func (t *Tracee) deriveEvents(ctx context.Context, in <-chan *trace.Event) (
 						// Derived events might need filtering as well
 						if t.matchPolicies(event) == 0 {
 							_ = t.stats.EventsFiltered.Increment()
+							timer += timetime.Since(stime)
 							continue
 						}
 					}
@@ -563,6 +579,8 @@ func (t *Tracee) deriveEvents(ctx context.Context, in <-chan *trace.Event) (
 					// Process derived events
 					t.processEvent(event)
 					out <- event
+					timer += timetime.Since(stime)
+
 				}
 			case <-ctx.Done():
 				return

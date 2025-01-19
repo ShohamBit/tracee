@@ -17,15 +17,13 @@ type DeriveFunction func(trace.Event) ([]trace.Event, []error)
 // The Enabled flag is used in order to skip derivation of unneeded events.
 type Table map[events.ID]map[events.ID]struct {
 	DeriveFunction DeriveFunction
-	Enabled        func() bool
 }
 
 // Register registers a new derivation handler
-func (t Table) Register(deriveFrom, deriveTo events.ID, deriveCondition func() bool, deriveLogic DeriveFunction) error {
-	if t[deriveFrom] == nil {
+func (t Table) Register(deriveFrom, deriveTo events.ID, deriveLogic DeriveFunction) error {
+	if _, ok := t[deriveFrom]; !ok {
 		t[deriveFrom] = make(map[events.ID]struct {
 			DeriveFunction DeriveFunction
-			Enabled        func() bool
 		})
 	}
 
@@ -34,12 +32,13 @@ func (t Table) Register(deriveFrom, deriveTo events.ID, deriveCondition func() b
 	}
 	t[deriveFrom][deriveTo] = struct {
 		DeriveFunction DeriveFunction
-		Enabled        func() bool
 	}{
 		DeriveFunction: deriveLogic,
-		Enabled:        deriveCondition,
 	}
 	return nil
+}
+func (t Table) HasDerivedEvent(eventID events.ID) bool {
+	return len(t[eventID]) > 0
 }
 
 // DeriveEvent takes a trace.Event and checks if it can derive additional events from it as defined by a derivationTable.
@@ -48,16 +47,16 @@ func (t Table) DeriveEvent(event trace.Event, origArgs []trace.Argument) ([]trac
 	errors := []error{}
 	deriveFns := t[events.ID(event.EventID)]
 	for id, deriveFn := range deriveFns {
-		if deriveFn.Enabled() {
-			// at each derivation, we need use a copy of the original arguments,
-			// since they might be modified by a previous derivation.
-			event.Args = slices.Clone(origArgs)
-			derivative, errs := deriveFn.DeriveFunction(event)
-			for _, err := range errs {
-				errors = append(errors, deriveError(id, err))
-			}
-			derivatives = append(derivatives, derivative...)
+
+		// at each derivation, we need use a copy of the original arguments,
+		// since they might be modified by a previous derivation.
+		event.Args = slices.Clone(origArgs)
+		derivative, errs := deriveFn.DeriveFunction(event)
+		for _, err := range errs {
+			errors = append(errors, deriveError(id, err))
 		}
+		derivatives = append(derivatives, derivative...)
+
 	}
 
 	return derivatives, errors

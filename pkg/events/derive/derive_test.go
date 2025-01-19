@@ -28,7 +28,6 @@ func Test_DeriveEvent(t *testing.T) {
 		testEventID: {
 			failEventID: {
 				DeriveFunction: alwaysDeriveError(),
-				Enabled:        func() bool { return true },
 			},
 			deriveEventID: {
 				DeriveFunction: func(e trace.Event) ([]trace.Event, []error) {
@@ -38,13 +37,11 @@ func Test_DeriveEvent(t *testing.T) {
 						},
 					}, nil
 				},
-				Enabled: func() bool { return true },
 			},
 			noDerivationEventID: {
 				DeriveFunction: func(e trace.Event) ([]trace.Event, []error) {
 					return []trace.Event{}, nil
 				},
-				Enabled: func() bool { return true },
 			},
 		},
 	}
