@@ -1,8 +1,6 @@
 package derive
 
 import (
-	"slices"
-
 	"github.com/aquasecurity/tracee/pkg/events"
 	"github.com/aquasecurity/tracee/types/trace"
 )
@@ -50,7 +48,7 @@ func (t Table) DeriveEvent(event trace.Event, origArgs []trace.Argument) ([]trac
 
 		// at each derivation, we need use a copy of the original arguments,
 		// since they might be modified by a previous derivation.
-		event.Args = slices.Clone(origArgs)
+		event.Args = origArgs
 		derivative, errs := deriveFn.DeriveFunction(event)
 		for _, err := range errs {
 			errors = append(errors, deriveError(id, err))

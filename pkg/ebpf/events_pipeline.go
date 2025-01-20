@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"slices"
 	"strconv"
 	"sync"
 	timetime "time"
@@ -526,12 +525,12 @@ func (t *Tracee) deriveEvents(ctx context.Context, in <-chan *trace.Event) (
 					timer += timetime.Since(stime)
 					continue // might happen during initialization (ctrl+c seg faults)
 				}
-				if !t.eventDerivations.HasDerivedEvent(events.ID(event.EventID)) {
-					// fmt.Printf("doesnt have derivitive")
-					//fmt.Println(event.EventName)
-					timer += timetime.Since(stime)
-					continue
-				}
+				// if !t.eventDerivations.HasDerivedEvent(events.ID(event.EventID)) {
+				// 	// fmt.Printf("doesnt have derivitive")
+				// 	//fmt.Println(event.EventName)
+				// 	timer += timetime.Since(stime)
+				// 	continue
+				// }
 
 				// Get a copy of our event before sending it down the pipeline. This is
 				// needed because later modification of the event (in particular of the
@@ -541,11 +540,11 @@ func (t *Tracee) deriveEvents(ctx context.Context, in <-chan *trace.Event) (
 				eventCopy := *event
 				// shallow clone the event arguments (new slice is created) before deriving the copy,
 				// to ensure the original event arguments are not modified by the derivation stage.
-				argsCopy := slices.Clone(event.Args)
+				//				argsCopy := slices.Clone(event.Args)
 				out <- event
 
 				// Note: event is being derived before any of its args are parsed.
-				derivatives, errors := t.eventDerivations.DeriveEvent(eventCopy, argsCopy)
+				derivatives, errors := t.eventDerivations.DeriveEvent(eventCopy, eventCopy.Args)
 
 				for _, err := range errors {
 					t.handleError(err)
@@ -571,7 +570,6 @@ func (t *Tracee) deriveEvents(ctx context.Context, in <-chan *trace.Event) (
 						// Derived events might need filtering as well
 						if t.matchPolicies(event) == 0 {
 							_ = t.stats.EventsFiltered.Increment()
-							timer += timetime.Since(stime)
 							continue
 						}
 					}
