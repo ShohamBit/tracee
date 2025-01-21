@@ -4,36 +4,37 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/client"
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd"
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd/flags"
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd/printer"
+	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/config"
 )
 
 func GetStream(cmdCobra *cobra.Command) (cmd.Stream, error) {
 	var stream cmd.Stream
 
-	server, err := flags.PrepareServer(viper.GetString(client.ServerFlag))
+	//
+	// Prepare Flags
+	//
+
+	server, err := flags.PrepareServer(viper.GetString(flags.ServerFlag))
 	if err != nil {
 		return stream, err
 	}
 
-	outputFlag, err := cmdCobra.Flags().GetString("output")
+	output, err := flags.PrepareOutput(cmdCobra, viper.GetString(flags.OutputFlag))
 	if err != nil {
-		return stream, err
-	}
-	if err := flags.PrepareOutput(cmdCobra, outputFlag); err != nil {
 		return stream, err
 	}
 
-	formatFlag, err := cmdCobra.Flags().GetString("format")
+	format, err := flags.PrepareFormat(viper.GetString(flags.FormatFlag))
 	if err != nil {
 		return stream, err
 	}
-	format, err := flags.PrepareFormat(formatFlag)
-	if err != nil {
-		return stream, err
-	}
+
+	//
+	//	Create stream runner
+	//
 
 	p, err := printer.New(cmdCobra, format)
 	if err != nil {
@@ -41,6 +42,15 @@ func GetStream(cmdCobra *cobra.Command) (cmd.Stream, error) {
 	}
 	stream.Printer = p
 	stream.Server = server
+	stream.Config.Printer = config.PrinterConfig{
+		Kind:    format,
+		OutPath: output.Path,
+		OutFile: output.Writer,
+	}
+	stream.Config.Server = config.ServerConfig{
+		Protocol: "unix",
+		Address:  server.Addr,
+	}
 	return stream, nil
 }
 
