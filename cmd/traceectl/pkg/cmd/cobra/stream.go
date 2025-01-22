@@ -53,16 +53,3 @@ func GetStream(cmdCobra *cobra.Command) (cmd.Stream, error) {
 	}
 	return stream, nil
 }
-
-func GetVersion(cmdCobra *cobra.Command) (cmd.Version, error) {
-	var version cmd.Version
-
-	server, err := flags.PrepareServer(viper.GetString(client.ServerFlag))
-	if err != nil {
-		return version, err
-	}
-
-	version.Server = server
-	version.CMD = cmdCobra
-	return version, nil
-}

@@ -22,7 +22,7 @@ func NewClient(addr string) (*Server, error) {
 		Addr: addr,
 	}, nil
 }
-func (s Server) Connect() error {
+func (s *Server) Connect() error {
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	conn, err := grpc.NewClient("unix://"+s.Addr, opts...)
@@ -34,6 +34,6 @@ func (s Server) Connect() error {
 	s.serviceClient = pb.NewTraceeServiceClient(s.conn)
 	return nil
 }
-func (s Server) Close() error {
+func (s *Server) Close() error {
 	return s.conn.Close()
 }
