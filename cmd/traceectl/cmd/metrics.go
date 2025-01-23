@@ -6,6 +6,7 @@ import (
 	cmdCobra "github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd/cobra"
 
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/client"
+	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd/flags"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -15,7 +16,16 @@ var metricsCmd = &cobra.Command{
 	Short: "Display Tracee metrics",
 	Long:  "Retrieves metrics about Tracee's performance and resource usage.",
 	Run: func(cmd *cobra.Command, args []string) {
-		displayMetrics(cmd, args)
+		runner, err := cmdCobra.GetMetrics(cmd)
+		if err != nil {
+			cmd.PrintErrf("error creating runner: %s\n", err)
+			os.Exit(1)
+		}
+		if err := runner.Run(); err != nil {
+			cmd.PrintErrf("error running: %s\n", err)
+			os.Exit(1)
+		}
+		runner.Server.Close()
 	},
 }
 
