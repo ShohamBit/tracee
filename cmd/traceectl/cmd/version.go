@@ -3,6 +3,8 @@ package cmd
 import (
 	"os"
 
+	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd/flags"
+
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/client"
 	cmdCobra "github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd/cobra"
 
@@ -20,7 +22,7 @@ var versionCmd = &cobra.Command{
 			cmd.PrintErrf("error creating runner: %s\n", err)
 			os.Exit(1)
 		}
-		if err := runner.Run(cmd.Context()); err != nil {
+		if err := runner.Run(); err != nil {
 			cmd.PrintErrf("error running: %s\n", err)
 			os.Exit(1)
 		}
@@ -30,8 +32,8 @@ var versionCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(versionCmd)
-	versionCmd.Flags().String(client.ServerFlag, client.DefaultSocket, "Specify the server unix socket (default: /var/run/tracee.sock).")
-	if err := viper.BindPFlag(client.ServerFlag, versionCmd.Flags().Lookup(client.ServerFlag)); err != nil {
+	versionCmd.Flags().String(flags.ServerFlag, client.DefaultSocket, "Specify the server unix socket.")
+	if err := viper.BindPFlag(flags.ServerFlag, versionCmd.Flags().Lookup(flags.ServerFlag)); err != nil {
 		panic(err)
 	}
 }

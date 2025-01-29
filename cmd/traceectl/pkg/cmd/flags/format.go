@@ -1,14 +1,20 @@
 package flags
 
-import "fmt"
+import (
+	"fmt"
 
-func PrepareFormat(formatFlag string) (string, error) {
-	switch formatFlag {
-	case "table":
-		return "table", nil
-	case "json":
-		return "json", nil
+	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd/printer"
+)
+
+const FormatFlag = "format"
+
+func PrepareFormat(formatSlice string) (string, error) {
+	switch formatSlice {
+	case printer.TableFormat:
+		return printer.TableFormat, nil
+	case printer.JsonFormat:
+		return printer.JsonFormat, nil
 	default:
-		return "", fmt.Errorf("unsupported format type: %s", formatFlag)
+		return "", fmt.Errorf("unsupported format type: %s", formatSlice)
 	}
 }
