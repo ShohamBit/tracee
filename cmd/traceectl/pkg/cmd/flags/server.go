@@ -8,6 +8,8 @@ import (
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/client"
 )
 
+const ServerFlag = "server"
+
 func PrepareServer(serverSlice string) (*client.Server, error) {
 	var server *client.Server
 	var err error
