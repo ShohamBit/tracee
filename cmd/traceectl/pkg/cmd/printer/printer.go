@@ -1,12 +1,18 @@
 package printer
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
 
 	pb "github.com/aquasecurity/tracee/api/v1beta1"
 	"github.com/spf13/cobra"
+)
+
+const (
+	TableFormat = "table"
+	JsonFormat  = "json"
 )
 
 type EventPrinter interface {
@@ -25,11 +31,11 @@ type EventPrinter interface {
 func New(cmd *cobra.Command, kind string) (EventPrinter, error) {
 	var res EventPrinter
 	switch kind {
-	case "table":
+	case TableFormat:
 		res = &tableEventPrinter{
 			cmd: cmd,
 		}
-	case "json":
+	case JsonFormat:
 		res = &jsonEventPrinter{
 			cmd: cmd,
 		}
@@ -43,6 +49,7 @@ func New(cmd *cobra.Command, kind string) (EventPrinter, error) {
 	return res, nil
 }
 
+// table format
 type tableEventPrinter struct {
 	cmd *cobra.Command
 }
@@ -50,7 +57,7 @@ type tableEventPrinter struct {
 func (p tableEventPrinter) Init() error { return nil }
 
 func (p tableEventPrinter) Preamble() {
-	p.cmd.Printf("%-15s %-10s %-20s %-15s %s\n",
+	p.cmd.Printf("%-15s %-25s %-20s %-15s %s\n",
 		"TIME",
 		"EVENT NAME",
 		"POLICIES",
@@ -60,21 +67,52 @@ func (p tableEventPrinter) Preamble() {
 }
 
 func (p tableEventPrinter) Epilogue(metrics *pb.GetMetricsResponse) {
-	p.cmd.Printf("%s\n", metrics.String())
+	if metricsJson, err := metrics.MarshalJSON(); err != nil {
+		panic(err)
+	} else {
+		p.cmd.Printf("\n%s\n", metricsJson)
+	}
 }
 
 func (p tableEventPrinter) Print(event *pb.Event) {
-	p.cmd.Printf("%-15s %-10s %-20s %-15s %s\n",
-		event.Timestamp.AsTime().Format("15:04:05.000"),
+	eventData, err := p.eventValuesToJSON(event.GetData())
+	if err != nil {
+		panic(1)
+	}
+	p.cmd.Printf("%-15s %-25s %-20s %-15s %s\n",
+		event.Timestamp.AsTime().Format("15:04:05.00000"),
 		event.Name,
 		strings.Join(event.Policies.Matched, ","),
 		strconv.Itoa(int(event.Context.Process.Pid.Value)),
-		event.GetData(),
+		eventData,
 	)
 }
 
 func (p tableEventPrinter) Close() {}
 
+func (p tableEventPrinter) eventValuesToJSON(eventValues []*pb.EventValue) (string, error) {
+	// Create a slice to hold the marshaled JSON objects
+	jsonObjects := make([]json.RawMessage, len(eventValues))
+
+	// Marshal each EventValue individually
+	for i, ev := range eventValues {
+		jsonObj, err := json.Marshal(ev)
+		if err != nil {
+			return "", fmt.Errorf("error marshaling EventValue: %w", err)
+		}
+		jsonObjects[i] = jsonObj
+	}
+
+	// Marshal the slice of JSON objects
+	finalJSON, err := json.Marshal(jsonObjects)
+	if err != nil {
+		return "", fmt.Errorf("error marshaling JSON objects: %w", err)
+	}
+
+	return string(finalJSON), nil
+}
+
+// json format
 type jsonEventPrinter struct {
 	cmd *cobra.Command
 }
@@ -90,7 +128,7 @@ func (p jsonEventPrinter) Epilogue(metrics *pb.GetMetricsResponse) {
 func (p jsonEventPrinter) Print(event *pb.Event) {
 	eBytes, err := event.MarshalJSON()
 	if err != nil {
-		p.cmd.PrintErrf("Error marshaling event to json: %s\n", err)
+		p.cmd.PrintErrf("error marshaling event to json: %s\n", err)
 	}
 	p.cmd.Printf("%s\n", string(eBytes))
 }
