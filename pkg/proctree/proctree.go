@@ -35,10 +35,8 @@ import (
 //
 
 const (
-	DefaultProcessCacheSize = 16384
-	DefaultThreadCacheSize  = 32768
-	DefaultProcessCacheTTL  = time.Second * 120
-	DefaultThreadCacheTTL   = time.Second * 120
+	DefaultProcessCacheSize = 10928
+	DefaultThreadCacheSize  = 21856
 )
 
 type SourceType int
@@ -80,6 +78,13 @@ type ProcessTree struct {
 	procfsOnce  *sync.Once                   // busy loop debug message throttling
 	ctx         context.Context              // context for the process tree
 	procfsQuery bool
+
+	// pools
+	forkFeedPool     *sync.Pool // pool of ForkFeed instances
+	execFeedPool     *sync.Pool // pool of ExecFeed instances
+	exitFeedPool     *sync.Pool // pool of ExitFeed instances
+	taskInfoFeedPool *sync.Pool // pool of TaskInfoFeed instances
+	fileInfoFeedPool *sync.Pool // pool of FileInfoFeed instances
 }
 
 // NewProcessTree creates a new process tree.
@@ -146,6 +151,31 @@ func NewProcessTree(ctx context.Context, config ProcTreeConfig) (*ProcessTree, e
 		procfsOnce:  new(sync.Once),
 		ctx:         ctx,
 		procfsQuery: config.ProcfsQuerying,
+		forkFeedPool: &sync.Pool{
+			New: func() interface{} {
+				return &ForkFeed{}
+			},
+		},
+		execFeedPool: &sync.Pool{
+			New: func() interface{} {
+				return &ExecFeed{}
+			},
+		},
+		exitFeedPool: &sync.Pool{
+			New: func() interface{} {
+				return &ExitFeed{}
+			},
+		},
+		taskInfoFeedPool: &sync.Pool{
+			New: func() interface{} {
+				return &TaskInfoFeed{}
+			},
+		},
+		fileInfoFeedPool: &sync.Pool{
+			New: func() interface{} {
+				return &FileInfoFeed{}
+			},
+		},
 	}
 
 	if config.ProcfsInitialization {
@@ -163,10 +193,6 @@ func NewProcessTree(ctx context.Context, config ProcTreeConfig) (*ProcessTree, e
 // GetProcessByHash returns a process by its hash.
 func (pt *ProcessTree) GetProcessByHash(hash uint32) (*Process, bool) {
 	process, ok := pt.processes.Get(hash)
-	if !ok {
-		return nil, false
-	}
-
 	return process, ok
 }
 
@@ -174,19 +200,24 @@ func (pt *ProcessTree) GetProcessByHash(hash uint32) (*Process, bool) {
 func (pt *ProcessTree) GetOrCreateProcessByHash(hash uint32) *Process {
 	process, ok := pt.processes.Get(hash)
 	if !ok {
+		var taskInfo *TaskInfo
+
 		// Each process must have a thread with thread ID matching its process ID.
 		// Both share the same info as both represent the same task in the kernel.
 		thread, ok := pt.threads.Get(hash)
-		if !ok {
-			process = NewProcess(hash) // create a new process
-			thread = NewThreadWithInfo(hash, process.GetInfo())
-			pt.threads.Add(hash, thread)
+		if ok {
+			taskInfo = thread.GetInfo()
 		} else {
-			process = NewProcessWithInfo(hash, thread.GetInfo())
+			taskInfo = NewTaskInfo()
+			thread = NewThread(hash, taskInfo) // create a new thread
+			pt.threads.Add(hash, thread)
 		}
-		pt.processes.Add(hash, process)
-		process.AddThread(hash)
+
 		thread.SetLeaderHash(hash)
+
+		process = NewProcess(hash, taskInfo) // create a new process
+		process.AddThread(hash)
+		pt.processes.Add(hash, process)
 
 		return process
 	}
@@ -208,17 +239,89 @@ func (pt *ProcessTree) GetThreadByHash(hash uint32) (*Thread, bool) {
 func (pt *ProcessTree) GetOrCreateThreadByHash(hash uint32) *Thread {
 	thread, ok := pt.threads.Get(hash)
 	if !ok {
+		var taskInfo *TaskInfo
+
 		// Create a new thread
 		// If the thread is a leader task, sync its info with the process instance info.
 		process, ok := pt.processes.Get(hash)
 		if ok {
-			thread = NewThreadWithInfo(hash, process.GetInfo())
+			taskInfo = process.GetInfo()
 		} else {
-			thread = NewThread(hash)
+			taskInfo = NewTaskInfo()
 		}
+
+		thread = NewThread(hash, taskInfo) // create a new thread
 		pt.threads.Add(hash, thread)
+
 		return thread
 	}
 
 	return thread // return an existing thread
+}
+
+// Pools
+
+// GetForkFeedFromPool returns a ForkFeed from the pool, or creates a new one if the pool is empty.
+// ForkFeed certainly contains old data, so it must be updated before use.
+func (pt *ProcessTree) GetForkFeedFromPool() *ForkFeed {
+	// revive:disable:unchecked-type-assertion
+	return pt.forkFeedPool.Get().(*ForkFeed)
+	// revive:enable:unchecked-type-assertion
+}
+
+// PutForkFeedInPool returns a ForkFeed to the pool.
+func (pt *ProcessTree) PutForkFeedInPool(forkFeed *ForkFeed) {
+	pt.forkFeedPool.Put(forkFeed)
+}
+
+// GetExecFeedFromPool returns a ExecFeed from the pool, or creates a new one if the pool is empty.
+// ExecFeed certainly contains old data, so it must be updated before use.
+func (pt *ProcessTree) GetExecFeedFromPool() *ExecFeed {
+	// revive:disable:unchecked-type-assertion
+	return pt.execFeedPool.Get().(*ExecFeed)
+	// revive:enable:unchecked-type-assertion
+}
+
+// PutExecFeedInPool returns a ExecFeed to the pool.
+func (pt *ProcessTree) PutExecFeedInPool(execFeed *ExecFeed) {
+	pt.execFeedPool.Put(execFeed)
+}
+
+// GetExitFeedFromPool returns a ExitFeed from the pool, or creates a new one if the pool is empty.
+// ExitFeed certainly contains old data, so it must be updated before use.
+func (pt *ProcessTree) GetExitFeedFromPool() *ExitFeed {
+	// revive:disable:unchecked-type-assertion
+	return pt.exitFeedPool.Get().(*ExitFeed)
+	// revive:enable:unchecked-type-assertion
+}
+
+// PutExitFeedInPool returns a ExitFeed to the pool.
+func (pt *ProcessTree) PutExitFeedInPool(exitFeed *ExitFeed) {
+	pt.exitFeedPool.Put(exitFeed)
+}
+
+// GetTaskInfoFeedFromPool returns a TaskInfoFeed from the pool, or creates a new one if the pool is empty.
+// TaskInfoFeed certainly contains old data, so it must be updated before use.
+func (pt *ProcessTree) GetTaskInfoFeedFromPool() *TaskInfoFeed {
+	// revive:disable:unchecked-type-assertion
+	return pt.taskInfoFeedPool.Get().(*TaskInfoFeed)
+	// revive:enable:unchecked-type-assertion
+}
+
+// PutTaskInfoFeedInPool returns a TaskInfoFeed to the pool.
+func (pt *ProcessTree) PutTaskInfoFeedInPool(taskInfoFeed *TaskInfoFeed) {
+	pt.taskInfoFeedPool.Put(taskInfoFeed)
+}
+
+// GetFileInfoFeedFromPool returns a FileInfoFeed from the pool, or creates a new one if the pool is empty.
+// FileInfoFeed certainly contains old data, so it must be updated before use.
+func (pt *ProcessTree) GetFileInfoFeedFromPool() *FileInfoFeed {
+	// revive:disable:unchecked-type-assertion
+	return pt.fileInfoFeedPool.Get().(*FileInfoFeed)
+	// revive:enable:unchecked-type-assertion
+}
+
+// PutFileInfoFeedInPool returns a FileInfoFeed to the pool.
+func (pt *ProcessTree) PutFileInfoFeedInPool(fileInfoFeed *FileInfoFeed) {
+	pt.fileInfoFeedPool.Put(fileInfoFeed)
 }

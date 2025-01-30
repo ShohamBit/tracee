@@ -3,14 +3,12 @@ package ebpf
 import (
 	gocontext "context"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
-	"syscall"
 	"unsafe"
 
 	"kernel.org/pub/linux/libs/security/libcap/cap"
@@ -78,9 +76,8 @@ type Tracee struct {
 	writtenFiles   map[string]string
 	netCapturePcap *pcaps.Pcaps
 	// Internal Data
-	readFiles     map[string]string
-	pidsInMntns   bucketscache.BucketsCache // first n PIDs in each mountns
-	kernelSymbols *environment.KernelSymbolTable
+	readFiles   map[string]string
+	pidsInMntns bucketscache.BucketsCache // first n PIDs in each mountns
 	// eBPF
 	bpfModule     *bpf.Module
 	defaultProbes *probes.ProbeGroup
@@ -123,6 +120,9 @@ type Tracee struct {
 	policyManager *policy.Manager
 	// The dependencies of events used by Tracee
 	eventsDependencies *dependencies.Manager
+	// A reference to a environment.KernelSymbolTable that might change at runtime.
+	// This should only be accessed using t.getKernelSymbols() and t.setKernelSymbols()
+	kernelSymbols atomic.Pointer[environment.KernelSymbolTable]
 	// Ksymbols needed to be kept alive in table.
 	// This does not mean they are required for tracee to function.
 	// TODO: remove this in favor of dependency manager nodes
@@ -135,6 +135,14 @@ func (t *Tracee) Stats() *metrics.Stats {
 
 func (t *Tracee) Engine() *engine.Engine {
 	return t.sigEngine
+}
+
+func (t *Tracee) getKernelSymbols() *environment.KernelSymbolTable {
+	return t.kernelSymbols.Load()
+}
+
+func (t *Tracee) setKernelSymbols(kernelSymbols *environment.KernelSymbolTable) {
+	t.kernelSymbols.Store(kernelSymbols)
 }
 
 // New creates a new Tracee instance based on a given valid Config. It is expected that it won't
@@ -362,12 +370,13 @@ func (t *Tracee) Init(ctx gocontext.Context) error {
 
 	err = capabilities.GetInstance().Specific(
 		func() error {
-			t.kernelSymbols, err = environment.NewKernelSymbolTable(
-				environment.WithRequiredSymbols(t.requiredKsyms),
-			)
-			// Cleanup memory in list
-			t.requiredKsyms = []string{}
-			return err
+			// t.requiredKsyms may contain non-data symbols, but it doesn't affect the validity of this call
+			kernelSymbols, err := environment.NewKernelSymbolTable(true, true, t.requiredKsyms...)
+			if err != nil {
+				return err
+			}
+			t.setKernelSymbols(kernelSymbols)
+			return nil
 		},
 		cap.SYSLOG,
 	)
@@ -384,17 +393,24 @@ func (t *Tracee) Init(ctx gocontext.Context) error {
 	usedClockID := traceetime.CLOCK_BOOTTIME
 	err = capabilities.GetInstance().EBPF(
 		func() error {
+			// Since this code is running with sufficient capabilities, we can safely trust the result of `BPFHelperIsSupported`.
+			// If the helper is reported as supported (`supported == true`), it is assumed to be reliable for use.
+			// If `supported == false`, it indicates that the helper for getting BOOTTIME is not available.
+			// The `innerErr` provides information about errors that occurred during the check, regardless of whether `supported`
+			// is true or false.
+			// For a full explanation of the caveats and behavior, refer to:
+			// https://github.com/aquasecurity/libbpfgo/blob/eb576c71ece75930a693b8b0687c5d052a5dbd56/libbpfgo.go#L99-L119
 			supported, innerErr := bpf.BPFHelperIsSupported(bpf.BPFProgTypeKprobe, bpf.BPFFuncKtimeGetBootNs)
 
-			// only report if operation not permitted
-			if errors.Is(innerErr, syscall.EPERM) {
-				return innerErr
-			}
-
-			// If BPFFuncKtimeGetBootNs is not available, eBPF will generate events based on monotonic time.
+			// Use CLOCK_MONOTONIC only when the helper is explicitly unsupported
 			if !supported {
 				usedClockID = traceetime.CLOCK_MONOTONIC
 			}
+
+			if innerErr != nil {
+				logger.Debugw("Detect clock timing", "warn", innerErr)
+			}
+
 			return nil
 		})
 	if err != nil {
@@ -604,13 +620,13 @@ func (t *Tracee) initDerivationTable() error {
 		events.SyscallTableCheck: {
 			events.HookedSyscall: {
 				Enabled:        shouldSubmit(events.SyscallTableCheck),
-				DeriveFunction: derive.DetectHookedSyscall(t.kernelSymbols),
+				DeriveFunction: derive.DetectHookedSyscall(t.getKernelSymbols()),
 			},
 		},
 		events.PrintNetSeqOps: {
 			events.HookedSeqOps: {
 				Enabled:        shouldSubmit(events.HookedSeqOps),
-				DeriveFunction: derive.HookedSeqOps(t.kernelSymbols),
+				DeriveFunction: derive.HookedSeqOps(t.getKernelSymbols()),
 			},
 		},
 		events.HiddenKernelModuleSeeker: {
@@ -913,17 +929,11 @@ func getUnavailbaleKsymbols(ksymbols []events.KSymbol, kernelSymbols *environmen
 	var unavailableSymbols []events.KSymbol
 
 	for _, ksymbol := range ksymbols {
-		sym, err := kernelSymbols.GetSymbolByName(ksymbol.GetSymbolName())
+		_, err := kernelSymbols.GetSymbolByName(ksymbol.GetSymbolName())
 		if err != nil {
 			// If the symbol is not found, it means it's unavailable.
 			unavailableSymbols = append(unavailableSymbols, ksymbol)
 			continue
-		}
-		for _, s := range sym {
-			if s.Address == 0 {
-				// Same if the symbol is found but its address is 0.
-				unavailableSymbols = append(unavailableSymbols, ksymbol)
-			}
 		}
 	}
 	return unavailableSymbols
@@ -944,7 +954,7 @@ func (t *Tracee) validateKallsymsDependencies() {
 	}
 
 	validateEvent := func(eventId events.ID) bool {
-		missingDepSyms := getUnavailbaleKsymbols(evtDefSymDeps(eventId), t.kernelSymbols)
+		missingDepSyms := getUnavailbaleKsymbols(evtDefSymDeps(eventId), t.getKernelSymbols())
 		shouldFailEvent := false
 		for _, symDep := range missingDepSyms {
 			if symDep.IsRequired() {
@@ -1159,7 +1169,7 @@ func (t *Tracee) attachEvent(id events.ID) error {
 		return err
 	}
 	for _, probe := range depsNode.GetDependencies().GetProbes() {
-		err := t.defaultProbes.Attach(probe.GetHandle(), t.cgroups, t.kernelSymbols)
+		err := t.defaultProbes.Attach(probe.GetHandle(), t.cgroups, t.getKernelSymbols())
 		if err == nil {
 			continue
 		}
@@ -1192,7 +1202,7 @@ func (t *Tracee) attachProbes() error {
 				logger.Errorw("Got node from type not requested")
 				return nil
 			}
-			err := t.defaultProbes.Attach(probeNode.GetHandle(), t.cgroups, t.kernelSymbols)
+			err := t.defaultProbes.Attach(probeNode.GetHandle(), t.cgroups, t.getKernelSymbols())
 			if err != nil {
 				return []dependencies.Action{dependencies.NewCancelNodeAddAction(err)}
 			}
@@ -1575,11 +1585,10 @@ func (t *Tracee) getSelfLoadedPrograms(kprobesOnly bool) map[string]int {
 	uniqueHooksMap := map[probeMapKey]struct{}{}
 
 	for _, tr := range t.policyManager.EventsSelected() {
-		if !events.Core.IsDefined(tr) {
+		definition := events.Core.GetDefinitionByID(tr)
+		if definition.NotValid() {
 			continue
 		}
-
-		definition := events.Core.GetDefinitionByID(tr)
 
 		for _, depProbes := range definition.GetDependencies().GetProbes() {
 			currProbe := t.defaultProbes.GetProbeByHandle(depProbes.GetHandle())
@@ -1722,7 +1731,7 @@ func (t *Tracee) triggerSeqOpsIntegrityCheck(event trace.Event) {
 	}
 	var seqOpsPointers [len(derive.NetSeqOps)]uint64
 	for i, seqName := range derive.NetSeqOps {
-		seqOpsStruct, err := t.kernelSymbols.GetSymbolByOwnerAndName("system", seqName)
+		seqOpsStruct, err := t.getKernelSymbols().GetSymbolByOwnerAndName("system", seqName)
 		if err != nil {
 			continue
 		}
@@ -1816,7 +1825,7 @@ func (t *Tracee) triggerMemDump(event trace.Event) []error {
 
 					continue
 				}
-				symbol, err := t.kernelSymbols.GetSymbolByOwnerAndName(owner, name)
+				symbol, err := t.getKernelSymbols().GetSymbolByOwnerAndName(owner, name)
 				if err != nil {
 					if owner != "system" {
 						errs = append(errs, errfmt.Errorf("policy %d: invalid symbols provided to print_mem_dump event: %s - %v", p.ID, field, err))
@@ -1828,7 +1837,7 @@ func (t *Tracee) triggerMemDump(event trace.Event) []error {
 					prefixes := []string{"sys_", "__x64_sys_", "__arm64_sys_"}
 					var errSyscall error
 					for _, prefix := range prefixes {
-						symbol, errSyscall = t.kernelSymbols.GetSymbolByOwnerAndName(owner, prefix+name)
+						symbol, errSyscall = t.getKernelSymbols().GetSymbolByOwnerAndName(owner, prefix+name)
 						if errSyscall == nil {
 							err = nil
 							break

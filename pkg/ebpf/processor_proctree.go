@@ -5,7 +5,6 @@ import (
 
 	"github.com/aquasecurity/tracee/pkg/events/parse"
 	"github.com/aquasecurity/tracee/pkg/logger"
-	"github.com/aquasecurity/tracee/pkg/proctree"
 	traceetime "github.com/aquasecurity/tracee/pkg/time"
 	"github.com/aquasecurity/tracee/pkg/utils"
 	"github.com/aquasecurity/tracee/types/trace"
@@ -17,91 +16,94 @@ import (
 
 // procTreeForkProcessor handles process fork events.
 func (t *Tracee) procTreeForkProcessor(event *trace.Event) error {
-	var errs []error
-
 	if t.processTree == nil {
 		return fmt.Errorf("process tree is disabled")
 	}
+
+	var err error
+	// NOTE: override all the fields of the forkFeed, to avoid any previous data.
+	forkFeed := t.processTree.GetForkFeedFromPool()
+	defer t.processTree.PutForkFeedInPool(forkFeed)
 
 	// NOTE: The "parent" related arguments can be ignored for process tree purposes.
 
 	// Parent Process (Go up in hierarchy until parent is a process and not a lwp)
-	parentTid, err := parse.ArgVal[int32](event.Args, "parent_process_tid")
-	errs = append(errs, err)
-	parentNsTid, err := parse.ArgVal[int32](event.Args, "parent_process_ns_tid")
-	errs = append(errs, err)
-	parentPid, err := parse.ArgVal[int32](event.Args, "parent_process_pid")
-	errs = append(errs, err)
-	parentNsPid, err := parse.ArgVal[int32](event.Args, "parent_process_ns_pid")
-	errs = append(errs, err)
-	parentStartTime, err := parse.ArgVal[uint64](event.Args, "parent_process_start_time")
-	errs = append(errs, err)
-
-	// Thread Group Leader (might be the same as the "child", if "child" is a process)
-	leaderTid, err := parse.ArgVal[int32](event.Args, "leader_tid")
-	errs = append(errs, err)
-	leaderNsTid, err := parse.ArgVal[int32](event.Args, "leader_ns_tid")
-	errs = append(errs, err)
-	leaderPid, err := parse.ArgVal[int32](event.Args, "leader_pid")
-	errs = append(errs, err)
-	leaderNsPid, err := parse.ArgVal[int32](event.Args, "leader_ns_pid")
-	errs = append(errs, err)
-	leaderStartTime, err := parse.ArgVal[uint64](event.Args, "leader_start_time")
-	errs = append(errs, err)
-
-	// Child (might be a process or a thread)
-	childTid, err := parse.ArgVal[int32](event.Args, "child_tid")
-	errs = append(errs, err)
-	childNsTid, err := parse.ArgVal[int32](event.Args, "child_ns_tid")
-	errs = append(errs, err)
-	childPid, err := parse.ArgVal[int32](event.Args, "child_pid")
-	errs = append(errs, err)
-	childNsPid, err := parse.ArgVal[int32](event.Args, "child_ns_pid")
-	errs = append(errs, err)
-	childStartTime, err := parse.ArgVal[uint64](event.Args, "start_time") // child_start_time
-	errs = append(errs, err)
-
-	// Deal with errors
-	for _, err := range errs {
-		if err != nil {
-			return err
-		}
+	forkFeed.ParentTid, err = parse.ArgVal[int32](event.Args, "parent_process_tid")
+	if err != nil {
+		return err
+	}
+	forkFeed.ParentNsTid, err = parse.ArgVal[int32](event.Args, "parent_process_ns_tid")
+	if err != nil {
+		return err
+	}
+	forkFeed.ParentPid, err = parse.ArgVal[int32](event.Args, "parent_process_pid")
+	if err != nil {
+		return err
+	}
+	forkFeed.ParentNsPid, err = parse.ArgVal[int32](event.Args, "parent_process_ns_pid")
+	if err != nil {
+		return err
+	}
+	forkFeed.ParentStartTime, err = parse.ArgVal[uint64](event.Args, "parent_process_start_time")
+	if err != nil {
+		return err
 	}
 
-	// Calculate hashes
-	childHash := utils.HashTaskID(uint32(childTid), uint64(childStartTime))
-	parentHash := utils.HashTaskID(uint32(parentTid), uint64(parentStartTime))
-	leaderHash := utils.HashTaskID(uint32(leaderTid), uint64(leaderStartTime))
+	// Thread Group Leader (might be the same as the "child", if "child" is a process)
+	forkFeed.LeaderTid, err = parse.ArgVal[int32](event.Args, "leader_tid")
+	if err != nil {
+		return err
+	}
+	forkFeed.LeaderNsTid, err = parse.ArgVal[int32](event.Args, "leader_ns_tid")
+	if err != nil {
+		return err
+	}
+	forkFeed.LeaderPid, err = parse.ArgVal[int32](event.Args, "leader_pid")
+	if err != nil {
+		return err
+	}
+	forkFeed.LeaderNsPid, err = parse.ArgVal[int32](event.Args, "leader_ns_pid")
+	if err != nil {
+		return err
+	}
+	forkFeed.LeaderStartTime, err = parse.ArgVal[uint64](event.Args, "leader_start_time")
+	if err != nil {
+		return err
+	}
 
-	return t.processTree.FeedFromFork(
-		proctree.ForkFeed{
-			TimeStamp:       childStartTime, // event timestamp is the same
-			ChildHash:       childHash,
-			ParentHash:      parentHash,
-			LeaderHash:      leaderHash,
-			ParentTid:       parentTid,
-			ParentNsTid:     parentNsTid,
-			ParentPid:       parentPid,
-			ParentNsPid:     parentNsPid,
-			ParentStartTime: parentStartTime,
-			LeaderTid:       leaderTid,
-			LeaderNsTid:     leaderNsTid,
-			LeaderPid:       leaderPid,
-			LeaderNsPid:     leaderNsPid,
-			LeaderStartTime: leaderStartTime,
-			ChildTid:        childTid,
-			ChildNsTid:      childNsTid,
-			ChildPid:        childPid,
-			ChildNsPid:      childNsPid,
-			ChildStartTime:  childStartTime,
-		},
-	)
+	// Child (might be a process or a thread)
+	forkFeed.ChildTid, err = parse.ArgVal[int32](event.Args, "child_tid")
+	if err != nil {
+		return err
+	}
+	forkFeed.ChildNsTid, err = parse.ArgVal[int32](event.Args, "child_ns_tid")
+	if err != nil {
+		return err
+	}
+	forkFeed.ChildPid, err = parse.ArgVal[int32](event.Args, "child_pid")
+	if err != nil {
+		return err
+	}
+	forkFeed.ChildNsPid, err = parse.ArgVal[int32](event.Args, "child_ns_pid")
+	if err != nil {
+		return err
+	}
+	forkFeed.ChildStartTime, err = parse.ArgVal[uint64](event.Args, "start_time") // child_start_time
+	if err != nil {
+		return err
+	}
+	forkFeed.TimeStamp = forkFeed.ChildStartTime // event timestamp is the same
+
+	// Calculate hashes
+	forkFeed.ParentHash = utils.HashTaskID(uint32(forkFeed.ParentTid), uint64(forkFeed.ParentStartTime))
+	forkFeed.ChildHash = utils.HashTaskID(uint32(forkFeed.ChildTid), uint64(forkFeed.ChildStartTime))
+	forkFeed.LeaderHash = utils.HashTaskID(uint32(forkFeed.LeaderTid), uint64(forkFeed.LeaderStartTime))
+
+	return t.processTree.FeedFromFork(forkFeed)
 }
 
 // procTreeExecProcessor handles process exec events.
 func (t *Tracee) procTreeExecProcessor(event *trace.Event) error {
-	var errs []error
-
 	if t.processTree == nil {
 		return fmt.Errorf("process tree is disabled")
 	}
@@ -109,76 +111,74 @@ func (t *Tracee) procTreeExecProcessor(event *trace.Event) error {
 		return nil // chek FeedFromExec for TODO of execve() handled by threads
 	}
 
-	timestamp := uint64(event.Timestamp)
-	taskHash := utils.HashTaskID(uint32(event.HostThreadID), uint64(event.ThreadStartTime))
+	var err error
+
+	// NOTE: override all the fields of the execFeed, to avoid any previous data.
+	execFeed := t.processTree.GetExecFeedFromPool()
+	defer t.processTree.PutExecFeedInPool(execFeed)
 
 	// Executable
-	cmdPath, err := parse.ArgVal[string](event.Args, "cmdpath")
-	errs = append(errs, err)
-	pathName, err := parse.ArgVal[string](event.Args, "pathname")
-	errs = append(errs, err)
-	dev, err := parse.ArgVal[uint32](event.Args, "dev")
-	errs = append(errs, err)
-	inode, err := parse.ArgVal[uint64](event.Args, "inode")
-	errs = append(errs, err)
-	ctime, err := parse.ArgVal[uint64](event.Args, "ctime")
-	errs = append(errs, err)
-	inodeMode, err := parse.ArgVal[uint16](event.Args, "inode_mode")
-	errs = append(errs, err)
-
-	// Binary Interpreter (or Loader): might come empty from the kernel
-	interPathName, _ := parse.ArgVal[string](event.Args, "interpreter_pathname")
-	interDev, _ := parse.ArgVal[uint32](event.Args, "interpreter_dev")
-	interInode, _ := parse.ArgVal[uint64](event.Args, "interpreter_inode")
-	interCtime, _ := parse.ArgVal[uint64](event.Args, "interpreter_ctime")
-
-	// Real Interpreter
-	interp, err := parse.ArgVal[string](event.Args, "interp")
-	errs = append(errs, err)
-
-	// Others
-	stdinType, err := parse.ArgVal[uint16](event.Args, "stdin_type")
-	errs = append(errs, err)
-	stdinPath, err := parse.ArgVal[string](event.Args, "stdin_path")
-	errs = append(errs, err)
-	invokedFromKernel, err := parse.ArgVal[int32](event.Args, "invoked_from_kernel")
-	errs = append(errs, err)
-
-	// Handle errors
-	for _, err := range errs {
-		if err != nil {
-			return err
-		}
+	execFeed.CmdPath, err = parse.ArgVal[string](event.Args, "cmdpath")
+	if err != nil {
+		return err
+	}
+	execFeed.PathName, err = parse.ArgVal[string](event.Args, "pathname")
+	if err != nil {
+		return err
+	}
+	execFeed.Dev, err = parse.ArgVal[uint32](event.Args, "dev")
+	if err != nil {
+		return err
+	}
+	execFeed.Inode, err = parse.ArgVal[uint64](event.Args, "inode")
+	if err != nil {
+		return err
+	}
+	execFeed.Ctime, err = parse.ArgVal[uint64](event.Args, "ctime")
+	if err != nil {
+		return err
+	}
+	execFeed.InodeMode, err = parse.ArgVal[uint16](event.Args, "inode_mode")
+	if err != nil {
+		return err
 	}
 
-	return t.processTree.FeedFromExec(
-		proctree.ExecFeed{
-			TimeStamp:         timestamp,
-			TaskHash:          taskHash,
-			ParentHash:        0, // regular pipeline does not have parent hash
-			LeaderHash:        0, // regular pipeline does not have leader hash
-			CmdPath:           cmdPath,
-			PathName:          pathName,
-			Dev:               dev,
-			Inode:             inode,
-			Ctime:             ctime,
-			InodeMode:         inodeMode,
-			InterpreterPath:   interPathName,
-			InterpreterDev:    interDev,
-			InterpreterInode:  interInode,
-			InterpreterCtime:  interCtime,
-			Interp:            interp,
-			StdinType:         stdinType,
-			StdinPath:         stdinPath,
-			InvokedFromKernel: invokedFromKernel,
-		},
-	)
+	// // Binary Interpreter (or Loader): might come empty from the kernel
+	// execFeed.InterpreterPath, _ := parse.ArgVal[string](event.Args, "interpreter_pathname")
+	// execFeed.InterpreterDev, _ := parse.ArgVal[uint32](event.Args, "interpreter_dev")
+	// execFeed.InterpreterInode, _ := parse.ArgVal[uint64](event.Args, "interpreter_inode")
+	// execFeed.InterpreterCtime, _ := parse.ArgVal[uint64](event.Args, "interpreter_ctime")
+
+	// Real Interpreter
+	execFeed.Interp, err = parse.ArgVal[string](event.Args, "interp")
+	if err != nil {
+		return err
+	}
+
+	// Others
+	execFeed.StdinType, err = parse.ArgVal[uint16](event.Args, "stdin_type")
+	if err != nil {
+		return err
+	}
+	execFeed.StdinPath, err = parse.ArgVal[string](event.Args, "stdin_path")
+	if err != nil {
+		return err
+	}
+	execFeed.InvokedFromKernel, err = parse.ArgVal[int32](event.Args, "invoked_from_kernel")
+	if err != nil {
+		return err
+	}
+
+	execFeed.TimeStamp = uint64(event.Timestamp)
+	execFeed.TaskHash = utils.HashTaskID(uint32(event.HostThreadID), uint64(event.ThreadStartTime))
+	execFeed.ParentHash = 0 // regular pipeline does not have parent hash
+	execFeed.LeaderHash = 0 // regular pipeline does not have leader hash
+
+	return t.processTree.FeedFromExec(execFeed)
 }
 
 // procTreeExitProcessor handles process exit events.
 func (t *Tracee) procTreeExitProcessor(event *trace.Event) error {
-	var errs []error
-
 	if t.processTree == nil {
 		return fmt.Errorf("process tree is disabled")
 	}
@@ -186,32 +186,32 @@ func (t *Tracee) procTreeExitProcessor(event *trace.Event) error {
 		return nil // chek FeedFromExec for TODO of execve() handled by threads
 	}
 
-	timestamp := uint64(event.Timestamp)
-	taskHash := utils.HashTaskID(uint32(event.HostThreadID), uint64(event.ThreadStartTime))
+	// NOTE: Currently FeedFromExit is only using TaskHash and TimeStamp from the ExitFeed.
+	// So the other fields are commented out for now.
+	//
+	// TODO: Analyze if the other fields will be needed in the future.
+	// var err error
 
-	// Exit logic arguments
-	exitCode, err := parse.ArgVal[int64](event.Args, "exit_code")
-	errs = append(errs, err)
-	groupExit, err := parse.ArgVal[bool](event.Args, "process_group_exit")
-	errs = append(errs, err)
+	// NOTE: override all the fields of the exitFeed, to avoid any previous data.
+	exitFeed := t.processTree.GetExitFeedFromPool()
+	defer t.processTree.PutExitFeedInPool(exitFeed)
 
-	// Handle errors
-	for _, err := range errs {
-		if err != nil {
-			return err
-		}
-	}
+	// // Exit logic arguments
+	// exitFeed.ExitCode, err = parse.ArgVal[int64](event.Args, "exit_code")
+	// if err != nil {
+	// 	return err
+	// }
+	// exitFeed.Group, err = parse.ArgVal[bool](event.Args, "process_group_exit")
+	// if err != nil {
+	// 	return err
+	// }
 
-	return t.processTree.FeedFromExit(
-		proctree.ExitFeed{
-			TimeStamp:  timestamp, // time of exit is already a timestamp
-			TaskHash:   taskHash,
-			ParentHash: 0, // regular pipeline does not have parent hash
-			LeaderHash: 0, // regular pipeline does not have leader hash
-			ExitCode:   exitCode,
-			Group:      groupExit,
-		},
-	)
+	exitFeed.TimeStamp = uint64(event.Timestamp) // time of exit is already a timestamp
+	exitFeed.TaskHash = utils.HashTaskID(uint32(event.HostThreadID), uint64(event.ThreadStartTime))
+	// exitFeed.ParentHash = 0 // regular pipeline does not have parent hash
+	// exitFeed.LeaderHash = 0 // regular pipeline does not have leader hash
+
+	return t.processTree.FeedFromExit(exitFeed)
 }
 
 //
