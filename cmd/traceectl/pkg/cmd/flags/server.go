@@ -18,7 +18,7 @@ func PrepareServer(serverSlice string) (*client.Server, error) {
 		return server, fmt.Errorf("server address cannot be empty")
 	}
 	if _, ok := os.Stat(address); ok != nil {
-		return server, fmt.Errorf("failed to get gRPC listening address (%s): %v", address, err)
+		return server, fmt.Errorf("failed to get gRPC listening address (%s): %v", address, ok)
 	}
 	if server, err = client.NewClient(address); err != nil {
 		return server, err
