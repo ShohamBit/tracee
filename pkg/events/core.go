@@ -11213,7 +11213,8 @@ var CoreEvents = map[ID]Definition{
 		},
 		sets: []string{"proc", "proc_life"},
 		fields: []trace.ArgMeta{
-			{Type: "long", Name: "exit_code"},
+			{Type: "int", Name: "exit_code"},
+			{Type: "int", Name: "signal_code"},
 			// The field value represents that all threads exited at the event time.
 			// Multiple exits of threads of the same process group at the same time could result that all threads exit
 			// events would have 'true' value in this field altogether.
@@ -13075,7 +13076,7 @@ var CoreEvents = map[ID]Definition{
 		},
 		sets: []string{},
 		fields: []trace.ArgMeta{
-			{Type: "int", Name: "syscall"},
+			{Type: "int", Name: "syscall"}, // converted to syscall name (string) at processing stage
 			{Type: "void*", Name: "ip"},
 			{Type: "char*", Name: "vma_type"},
 			{Type: "void*", Name: "vma_start"},
@@ -13095,7 +13096,7 @@ var CoreEvents = map[ID]Definition{
 		},
 		sets: []string{},
 		fields: []trace.ArgMeta{
-			{Type: "int", Name: "syscall"},
+			{Type: "int", Name: "syscall"}, // converted to syscall name (string) at processing stage
 			{Type: "void*", Name: "sp"},
 			{Type: "char*", Name: "vma_type"},
 			{Type: "void*", Name: "vma_start"},
@@ -13234,7 +13235,8 @@ var CoreEvents = map[ID]Definition{
 			{Type: "u32", Name: "task_hash"},
 			{Type: "u32", Name: "parent_hash"},
 			{Type: "u32", Name: "leader_hash"},
-			{Type: "long", Name: "exit_code"},
+			{Type: "int", Name: "exit_code"},
+			{Type: "int", Name: "signal_code"},
 			{Type: "bool", Name: "process_group_exit"},
 		},
 	},
