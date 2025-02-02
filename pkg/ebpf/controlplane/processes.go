@@ -219,11 +219,7 @@ func (ctrl *Controller) procTreeExitProcessor(args []trace.Argument) error {
 	// }
 
 	// // Exit logic arguments
-	// exitFeed.ExitCode, err = parse.ArgVal[int32](args, "exit_code")
-	// if err != nil {
-	// 	return err
-	// }
-	// exitFeed.SignalCode, err = parse.ArgVal[int32](args, "signal_code")
+	// exitFeed.ExitCode, err = parse.ArgVal[int64](args, "exit_code")
 	// if err != nil {
 	// 	return err
 	// }

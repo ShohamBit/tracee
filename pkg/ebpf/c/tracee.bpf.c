@@ -1547,6 +1547,7 @@ int tracepoint__sched__sched_process_exit(struct bpf_raw_tracepoint_args *ctx)
     if (!policies_matched(p.event))
         return 0;
 
+    long exit_code = get_task_exit_code(p.event->task);
     bool group_dead = false;
     struct task_struct *task = p.event->task;
     struct signal_struct *signal = BPF_CORE_READ(task, signal);
@@ -1558,16 +1559,8 @@ int tracepoint__sched__sched_process_exit(struct bpf_raw_tracepoint_args *ctx)
         group_dead = true;
     }
 
-    // extract exit code and signal values
-    int exit_code = get_task_exit_code(p.event->task);
-    int exit_code_real = exit_code >> 8;
-
-    save_to_submit_buf(&p.event->args_buf, (void *) &exit_code_real, sizeof(int), 0);
-    if (task_flags & PF_SIGNALED) {
-        int signal_code = exit_code & 0xFF;
-        save_to_submit_buf(&p.event->args_buf, (void *) &signal_code, sizeof(int), 1);
-    }
-    save_to_submit_buf(&p.event->args_buf, (void *) &group_dead, sizeof(bool), 2);
+    save_to_submit_buf(&p.event->args_buf, (void *) &exit_code, sizeof(long), 0);
+    save_to_submit_buf(&p.event->args_buf, (void *) &group_dead, sizeof(bool), 1);
 
     events_perf_submit(&p, 0);
 
@@ -7162,17 +7155,10 @@ int sched_process_exit_signal(struct bpf_raw_tracepoint_args *ctx)
     if (live.counter == 0)
         group_dead = true;
 
-    // extract exit code and signal values
-    int task_flags = get_task_flags(task);
-    int exit_code = get_task_exit_code(task);
-    int exit_code_real = exit_code >> 8;
+    long exit_code = get_task_exit_code(task);
 
-    save_to_submit_buf(&signal->args_buf, (void *) &exit_code_real, sizeof(int), 4);
-    if (task_flags & PF_SIGNALED) {
-        int signal_code = exit_code & 0xFF;
-        save_to_submit_buf(&signal->args_buf, (void *) &signal_code, sizeof(int), 5);
-    }
-    save_to_submit_buf(&signal->args_buf, (void *) &group_dead, sizeof(bool), 6);
+    save_to_submit_buf(&signal->args_buf, (void *) &exit_code, sizeof(long), 4);
+    save_to_submit_buf(&signal->args_buf, (void *) &group_dead, sizeof(bool), 5);
 
     signal_perf_submit(ctx, signal);
 
