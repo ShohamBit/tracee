@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/client"
+	"github.com/aquasecurity/tracee/cmd/traceectl/test"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,8 +20,8 @@ func TestPrepareServer(t *testing.T) {
 	}{
 		{
 			name:           "valid server address",
-			serverSlice:    "/var/run/tracee.sock",
-			expectedServer: &client.Server{Addr: "/var/run/tracee.sock"},
+			serverSlice:    test.DefaultSocket,
+			expectedServer: &client.Server{Addr: test.DefaultSocket},
 			expectedError:  nil,
 		},
 		{
@@ -36,15 +37,29 @@ func TestPrepareServer(t *testing.T) {
 			expectedError:  fmt.Errorf("server address cannot be empty"),
 		},
 	}
+
+	mockServer, err := test.SetupMockSocket()
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, testcase := range testCases {
 		t.Run(testcase.name, func(t *testing.T) {
-			t.Parallel()
-
 			server, err := PrepareServer(testcase.serverSlice)
-			if testcase.expectedError != nil || err != nil {
-				assert.ErrorContains(t, err, testcase.expectedError.Error())
+			if testcase.expectedError != nil {
+				if assert.ErrorContains(t, err, testcase.expectedError.Error()) {
+					return
+				}
 			}
-			assert.Equal(t, testcase.expectedServer, server)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if assert.Equal(t, testcase.expectedServer, server) {
+				return
+			}
+
 		})
+	}
+	if err := mockServer.TeardownMockSocket(); err != nil {
+		t.Fatal(err)
 	}
 }
