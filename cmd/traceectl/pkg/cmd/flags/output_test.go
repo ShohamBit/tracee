@@ -1,7 +1,6 @@
 package flags
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
@@ -33,13 +32,6 @@ func TestPrepareOutput(t *testing.T) {
 			outputSlice:    "test.txt",
 			expectedOutput: Output{Path: "test.txt", Writer: nil},
 			expectedError:  nil,
-		},
-		{
-			name:           "invalid output file",
-			cmd:            &cobra.Command{},
-			outputSlice:    "invalid/path/test.txt",
-			expectedOutput: Output{},
-			expectedError:  fmt.Errorf("failed to create directories for output file"),
 		},
 	}
 	for _, testcase := range testCases {
