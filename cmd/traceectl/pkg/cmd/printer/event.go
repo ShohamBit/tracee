@@ -75,7 +75,6 @@ func (p *tableDescribeEventsPrinter) Print(definition *pb.EventDefinition) {
 		strings.Join(definition.Tags, ", "),
 		definition.Description,
 	)
-
 }
 
 func (p *tableDescribeEventsPrinter) Init() error {

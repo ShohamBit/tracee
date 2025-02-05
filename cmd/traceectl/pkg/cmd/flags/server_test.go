@@ -57,7 +57,6 @@ func TestPrepareServer(t *testing.T) {
 			if assert.Equal(t, testcase.expectedServer, server) {
 				return
 			}
-
 		})
 	}
 	if err := mockServer.TeardownMockSocket(); err != nil {

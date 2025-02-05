@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/client"
-	cmdCobra "github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd/cobra"
+	cmdcobra "github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd/cobra"
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd/flags"
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd/printer"
 )
@@ -19,7 +19,7 @@ var streamCmd = &cobra.Command{
 Stream events directly from tracee to the preferred output format.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		runner, err := cmdCobra.GetStream(cmd)
+		runner, err := cmdcobra.GetStream(cmd)
 		if err != nil {
 			cmd.PrintErrf("error creating runner: %s\n", err)
 			os.Exit(1)

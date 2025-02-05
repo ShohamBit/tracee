@@ -45,5 +45,4 @@ func PrepareOutput(cmd *cobra.Command, outputSlice string) (Output, error) {
 		Path:   outputSlice,
 		Writer: cmd.OutOrStdout(),
 	}, nil
-
 }

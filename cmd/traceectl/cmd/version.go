@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/client"
-	cmdCobra "github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd/cobra"
+	cmdcobra "github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd/cobra"
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd/flags"
 )
 
@@ -16,7 +16,7 @@ var versionCmd = &cobra.Command{
 	Short: "Display the version of tracee",
 	Long:  "This is the version of the tracee application you connected to",
 	Run: func(cmd *cobra.Command, args []string) {
-		runner, err := cmdCobra.GetVersion(cmd)
+		runner, err := cmdcobra.GetVersion(cmd)
 		if err != nil {
 			cmd.PrintErrf("error creating runner: %s\n", err)
 			os.Exit(1)

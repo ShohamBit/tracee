@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/client"
-	cmdCobra "github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd/cobra"
+	cmdcobra "github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd/cobra"
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd/flags"
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd/printer"
 )
@@ -87,7 +87,7 @@ var describeEventCmd = &cobra.Command{
 	Long:  `Lists all available event definitions (built-in and plugin-defined), providing a brief summary of each.`,
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		runner, err := cmdCobra.GetDescribeEvent(cmd)
+		runner, err := cmdcobra.GetDescribeEvent(cmd)
 		if err != nil {
 			cmd.PrintErrf("error creating runner: %s\n", err)
 			os.Exit(1)
@@ -106,7 +106,7 @@ var enableEventCmd = &cobra.Command{
 	Long:  `Enables capturing of a specific event type.`,
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		runner, err := cmdCobra.GetEnableEvent(cmd)
+		runner, err := cmdcobra.GetEnableEvent(cmd)
 		if err != nil {
 			cmd.PrintErrf("error creating runner: %s\n", err)
 			os.Exit(1)
@@ -125,7 +125,7 @@ var disableEventCmd = &cobra.Command{
 	Long:  `Disables capturing of a specific event type.`,
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		runner, err := cmdCobra.GetDisableEvent(cmd)
+		runner, err := cmdcobra.GetDisableEvent(cmd)
 		if err != nil {
 			cmd.PrintErrf("error creating runner: %s\n", err)
 			os.Exit(1)

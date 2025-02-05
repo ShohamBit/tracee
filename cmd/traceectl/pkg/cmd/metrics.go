@@ -27,10 +27,10 @@ func (m Metrics) Run() error {
 	if err != nil {
 		return fmt.Errorf("error getting metrics: %s", err)
 	}
-	if metricsJson, err := response.MarshalJSON(); err != nil {
+	metricsJson, err := response.MarshalJSON()
+	if err != nil {
 		panic(err)
-	} else {
-		m.Printer.Printf("\n%s\n", metricsJson)
-		return nil
 	}
+	m.Printer.Printf("\n%s\n", metricsJson)
+	return nil
 }
