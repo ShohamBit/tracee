@@ -18,7 +18,7 @@ To use **traceectl**, you first need to compile and install the tool. Follow the
    Compile and install traceectl using the following commands:
 
    ``` bash
-   go build
+   make
    ```
 
 ## Configuring Tracee for traceectl
@@ -68,23 +68,10 @@ Once traceectl is installed and Tracee is running, you can use various commands 
 For more info about the traceectl command please refer to the appoint command documentation
 
 ## Flags
-  
-- server: Specifies the connection type, either unix or tcp.
 
-  ``` bash
-  traceectl --server unix:/unix/socket/path.sock
-  ```
-
-- output: Defines the output destination, such as stdout or a file.
-
-  ``` bash
-  traceectl stream --output file:/path/to/output.txt
-  ```
-
-For more info about the traceectl flags please refer to the appoint flag documentation
+For more info about the traceectl flags please refer to the appoint [flags documentation](./flags)
 
 ## Summary
 
 - **Install traceectl** by cloning the repository, building, and installing it with `make`.
-- **Configure Tracee** by running it with the appropriate gRPC Unix socket settings.
 - **Use traceectl** to interact with Tracee via commands like `stream`, `event`, `metrics`, and `version`.
