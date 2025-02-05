@@ -28,7 +28,7 @@ func (s Stream) Run() error {
 		return fmt.Errorf("error running stream: %s", err)
 	}
 	defer s.Server.Close()
-	//create signal chanel
+	// create signal chanel
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
@@ -76,5 +76,4 @@ func (s Stream) Run() error {
 			return err
 		}
 	}
-
 }

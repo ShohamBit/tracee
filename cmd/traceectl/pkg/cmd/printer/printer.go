@@ -68,11 +68,11 @@ func (p tableEventPrinter) Preamble() {
 }
 
 func (p tableEventPrinter) Epilogue(metrics *pb.GetMetricsResponse) {
-	if metricsJson, err := metrics.MarshalJSON(); err != nil {
+	metricsJson, err := metrics.MarshalJSON()
+	if err != nil {
 		panic(err)
-	} else {
-		p.cmd.Printf("\n%s\n", metricsJson)
 	}
+	p.cmd.Printf("\n%s\n", metricsJson)
 }
 
 func (p tableEventPrinter) Print(event *pb.Event) {

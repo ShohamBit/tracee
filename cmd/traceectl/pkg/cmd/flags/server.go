@@ -24,5 +24,4 @@ func PrepareServer(serverSlice string) (*client.Server, error) {
 		return server, err
 	}
 	return server, nil
-
 }
