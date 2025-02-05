@@ -1,13 +1,13 @@
 # `format` Flag
 
-The `--format` flag in **traceectl** is used to specify the output format for certain commands. Currently, this flag supports the following values for the `stream`, `event list`, and `event describe` commands:
+The `--format` flag in **traceectl** is used to specify the output format for certain commands. Currently, this flag supports the following values for the `stream` and `event describe` commands:
 
 - **`json`**: Outputs the data in JSON format, which is useful for automated processing or integration with other tools that consume JSON.
   
   Example:
 
   ```sh
-  traceectl event list --format json
+  traceectl stream --format json
   ```
 
   In this example, the command lists all available events and outputs them in JSON format.

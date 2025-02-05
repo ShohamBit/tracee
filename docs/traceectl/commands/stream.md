@@ -7,14 +7,12 @@ The `stream` command in **traceectl** allows users to stream events directly fro
 The `stream` command is structured as follows:
 
 ```sh
-traceectl stream [policies...] [flags]
+traceectl stream [flags]
 ```
 
-## Flags
-
-- **`--format`** (`-f`): Specifies the format for the output. Supported values are:
-  - `json`: Outputs event details in JSON format.
-  - `table`: Outputs event details in a tabular view.
+- **`--format`**: Specifies the format (default is `table`).
+- **`--server`**: Specifies the server unix socket path (default is `/var/run/tracee.sock`)
+- **`--output`**: Specifies the output (default is `stdout`)
 
 ## Examples
 

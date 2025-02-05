@@ -10,6 +10,8 @@ The `metrics` command is structured as follows:
 traceectl metrics 
 ```
 
+- **`--server`**: Specifies the server unix socket path (default is `/var/run/tracee.sock`)
+
 ## Examples
 
 - **Display Metrics in Table Format**

@@ -10,6 +10,8 @@ To display the version information, use the following command:
 traceectl version
 ```
 
+- **`--server`**: Specifies the server unix socket path (default is `/var/run/tracee.sock`)
+
 This command will output details such as:
 
 - **Version Number**: The current version of traceectl.
@@ -18,7 +20,7 @@ This command will output details such as:
 ### Example Output
 
 ``` bash
-v0.22.0-96-gaab269e885
+v0.22.0
 ```
 
 ### Summary
