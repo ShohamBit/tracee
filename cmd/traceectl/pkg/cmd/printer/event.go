@@ -5,9 +5,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/aquasecurity/table"
-	pb "github.com/aquasecurity/tracee/api/v1beta1"
 	"github.com/spf13/cobra"
+
+	"github.com/aquasecurity/table"
+
+	pb "github.com/aquasecurity/tracee/api/v1beta1"
 )
 
 const (

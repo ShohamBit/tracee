@@ -3,12 +3,13 @@ package cmd
 import (
 	"os"
 
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/client"
 	cmdCobra "github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd/cobra"
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd/flags"
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd/printer"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var streamCmd = &cobra.Command{

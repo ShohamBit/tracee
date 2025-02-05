@@ -1,11 +1,12 @@
 package cobra
 
 import (
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd"
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd/flags"
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/config"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 func GetVersion(cmdCobra *cobra.Command) (cmd.Version, error) {

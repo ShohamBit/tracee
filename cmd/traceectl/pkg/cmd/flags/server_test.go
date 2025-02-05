@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/client"
 	"github.com/aquasecurity/tracee/cmd/traceectl/test"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestPrepareServer(t *testing.T) {

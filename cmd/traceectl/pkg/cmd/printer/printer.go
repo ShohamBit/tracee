@@ -6,8 +6,9 @@ import (
 	"strconv"
 	"strings"
 
-	pb "github.com/aquasecurity/tracee/api/v1beta1"
 	"github.com/spf13/cobra"
+
+	pb "github.com/aquasecurity/tracee/api/v1beta1"
 )
 
 const (

@@ -1,9 +1,10 @@
 package client
 
 import (
-	pb "github.com/aquasecurity/tracee/api/v1beta1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+
+	pb "github.com/aquasecurity/tracee/api/v1beta1"
 )
 
 const (

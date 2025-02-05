@@ -1,12 +1,13 @@
 package cobra
 
 import (
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd"
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd/flags"
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd/printer"
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/config"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 func GetDescribeEvent(cmdCobra *cobra.Command) (cmd.DescribeEvent, error) {
