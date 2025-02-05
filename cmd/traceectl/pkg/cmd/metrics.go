@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/spf13/cobra"
+
 	pb "github.com/aquasecurity/tracee/api/v1beta1"
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/client"
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/config"
-	"github.com/spf13/cobra"
 )
 
 type Metrics struct {

@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd/printer"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd/printer"
 )
 
 func TestPrepareFormat(t *testing.T) {

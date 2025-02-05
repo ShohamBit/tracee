@@ -3,13 +3,12 @@ package cmd
 import (
 	"os"
 
-	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd/flags"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/client"
 	cmdCobra "github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd/cobra"
-
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
+	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd/flags"
 )
 
 var versionCmd = &cobra.Command{

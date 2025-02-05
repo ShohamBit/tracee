@@ -8,7 +8,6 @@ import (
 	"syscall"
 
 	pb "github.com/aquasecurity/tracee/api/v1beta1"
-
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/client"
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd/printer"
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/config"

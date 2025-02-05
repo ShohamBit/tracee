@@ -9,7 +9,6 @@ import (
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/client"
 	cmdCobra "github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd/cobra"
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd/flags"
-
 	"github.com/aquasecurity/tracee/cmd/traceectl/pkg/cmd/printer"
 )
 
