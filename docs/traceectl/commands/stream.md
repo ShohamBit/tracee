@@ -10,11 +10,24 @@ The `stream` command is structured as follows:
 traceectl stream [flags]
 ```
 
+- **`--policy`**: Specifies the policies to stream from (default is `""`).
 - **`--format`**: Specifies the format (default is `table`).
 - **`--server`**: Specifies the server unix socket path (default is `/var/run/tracee.sock`)
 - **`--output`**: Specifies the output (default is `stdout`)
 
 ## Examples
+
+- **Stream Events in JSON Format with a Specific Policy and different unix socket**
+  
+  ```sh
+  traceectl stream --format json --server /tmp/tracee.sock --policy policy1 policy2
+  ```
+
+- **Stream Events to file**
+  
+  ```sh
+  traceectl stream --output /path/to/file 
+  ```
 
 - **Stream Events in JSON Format**
   

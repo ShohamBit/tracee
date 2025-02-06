@@ -14,9 +14,10 @@ import (
 )
 
 type Stream struct {
-	Config  config.Config
-	Server  *client.Server
-	Printer printer.EventPrinter
+	Config   config.Config
+	Server   *client.Server
+	Printer  printer.EventPrinter
+	Policies []string
 }
 
 func (s Stream) Run() error {
@@ -35,7 +36,7 @@ func (s Stream) Run() error {
 	errChan := make(chan error)
 
 	go func() {
-		stream, err := s.Server.StreamEvents(ctx, &pb.StreamEventsRequest{Policies: []string{""}})
+		stream, err := s.Server.StreamEvents(ctx, &pb.StreamEventsRequest{Policies: s.Policies})
 		if err != nil {
 			errChan <- fmt.Errorf("error calling Stream: %s", err)
 			return

@@ -13,7 +13,7 @@ import (
 )
 
 var streamCmd = &cobra.Command{
-	Use:   "stream [policies...]",
+	Use:   "stream",
 	Short: "Stream events from tracee",
 	Long: `Stream Management:
 Stream events directly from tracee to the preferred output format.
@@ -47,5 +47,8 @@ func init() {
 	if err := viper.BindPFlag(flags.OutputFlag, streamCmd.Flags().Lookup(flags.OutputFlag)); err != nil {
 		panic(err)
 	}
-	// streamCmd.Flags().String("policy")
+	streamCmd.Flags().StringSlice(flags.PolicyFlag, []string{""}, "Specify the policies for streamed events.")
+	if err := viper.BindPFlag(flags.PolicyFlag, streamCmd.Flags().Lookup(flags.PolicyFlag)); err != nil {
+		panic(err)
+	}
 }
