@@ -516,17 +516,14 @@ func (t *Tracee) deriveEvents(ctx context.Context, in <-chan *trace.Event) (
 			New: func() any { return new(trace.Event) },
 		}
 
-		var eventsCount int = 0
-		var duration timetime.Duration = 0
-
+		timeWindow := 30 * timetime.Second // Define a 5-second time window (adjust as needed)
+		windowStartTime := timetime.Now()  // Start time of the current window
+		windowEventsCount := 0             // Count of events in the current window
 		for {
-			if eventsCount%10000 == 0 {
-				fmt.Printf("performance: %f events/sec \n", float64(eventsCount)/duration.Seconds())
-			}
+
 			select {
 			case origEvent := <-in:
-				start := timetime.Now()
-				eventsCount++
+				windowEventsCount++ // Use new window-based counter
 				if origEvent == nil {
 					continue
 				}
@@ -534,7 +531,6 @@ func (t *Tracee) deriveEvents(ctx context.Context, in <-chan *trace.Event) (
 				// Fast path check using precomputed flags
 				if !t.derivationFlags[events.ID(origEvent.EventID)] {
 					out <- origEvent
-					duration += timetime.Since(start)
 					continue
 				}
 
@@ -566,12 +562,19 @@ func (t *Tracee) deriveEvents(ctx context.Context, in <-chan *trace.Event) (
 					t.processEvent(deriv)
 					out <- deriv
 				}
-				duration += timetime.Since(start)
 
 				eventPool.Put(eventCopy)
 
 			case <-ctx.Done():
 				return
+			}
+			if timetime.Since(windowStartTime) >= timeWindow {
+				eventsPerSecond := float64(windowEventsCount) / timeWindow.Seconds()
+				fmt.Printf("performance: %.2f events/sec (over %v window)\n", eventsPerSecond, timeWindow)
+
+				// Reset for the next time window
+				windowEventsCount = 0
+				windowStartTime = timetime.Now()
 			}
 		}
 	}()
