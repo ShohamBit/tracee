@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"slices"
 	"strconv"
 	"sync"
 	timetime "time"
@@ -507,79 +508,68 @@ func (t *Tracee) deriveEvents(ctx context.Context, in <-chan *trace.Event) (
 ) {
 	out := make(chan *trace.Event, t.config.PipelineChannelSize)
 	errc := make(chan error, 1)
-	var times int = 0
-	var timer timetime.Duration = 0
 	go func() {
 		defer close(out)
 		defer close(errc)
 
+		var eventPool = sync.Pool{
+			New: func() any { return new(trace.Event) },
+		}
+
+		var eventsCount int = 0
+		var duration timetime.Duration = 0
+
 		for {
-			if times%10000 == 0 && times != 0 {
-				fmt.Printf("performance: %f\n", timer.Seconds()/float64(times)*10000)
+			if eventsCount%10000 == 0 {
+				fmt.Printf("performance: %f events/sec \n", float64(eventsCount)/duration.Seconds())
 			}
 			select {
-			case event := <-in:
-				times++
-				stime := timetime.Now()
-				if event == nil {
-					timer += timetime.Since(stime)
-					continue // might happen during initialization (ctrl+c seg faults)
+			case origEvent := <-in:
+				start := timetime.Now()
+				eventsCount++
+				if origEvent == nil {
+					continue
 				}
-				// if !t.eventDerivations.HasDerivedEvent(events.ID(event.EventID)) {
-				// 	// fmt.Printf("doesnt have derivitive")
-				// 	//fmt.Println(event.EventName)
-				// 	timer += timetime.Since(stime)
-				// 	continue
-				// }
 
-				// Get a copy of our event before sending it down the pipeline. This is
-				// needed because later modification of the event (in particular of the
-				// matched policies) can affect the derivation and later pipeline logic
-				// acting on the derived event.
+				// Fast path check using precomputed flags
+				if !t.derivationFlags[events.ID(origEvent.EventID)] {
+					out <- origEvent
+					duration += timetime.Since(start)
+					continue
+				}
 
-				eventCopy := *event
-				// shallow clone the event arguments (new slice is created) before deriving the copy,
-				// to ensure the original event arguments are not modified by the derivation stage.
-				//				argsCopy := slices.Clone(event.Args)
-				out <- event
+				// Pooled event copying
+				eventCopy := eventPool.Get().(*trace.Event)
+				*eventCopy = *origEvent
+				eventCopy.Args = slices.Clone(origEvent.Args)
 
-				// Note: event is being derived before any of its args are parsed.
-				derivatives, errors := t.eventDerivations.DeriveEvent(eventCopy, eventCopy.Args)
+				// Process original first
+				out <- origEvent
+
+				// Process derivations
+				derivatives, errors := t.eventDerivations.DeriveEvent(*eventCopy, origEvent.Args)
 
 				for _, err := range errors {
 					t.handleError(err)
 				}
 
 				for i := range derivatives {
-					// Passing "derivative" variable here will make the ptr address always
-					// be the same as the last item. This makes the printer to print 2 or
-					// 3 times the last event, instead of printing all derived events
-					// (when there are more than one).
-					//
-					// Nadav: Likely related to https://github.com/golang/go/issues/57969 (GOEXPERIMENT=loopvar).
-					//        Let's keep an eye on that moving from experimental for these and similar cases in tracee.
-					event := &derivatives[i]
+					deriv := &derivatives[i]
 
-					// Skip events that dont work with filtering due to missing types
-					// being handled (https://github.com/aquasecurity/tracee/issues/2486)
-					switch events.ID(derivatives[i].EventID) {
-					case events.SymbolsLoaded:
-					case events.SharedObjectLoaded:
-					case events.PrintMemDump:
-					default:
-						// Derived events might need filtering as well
-						if t.matchPolicies(event) == 0 {
+					if !t.derivationCache[deriv.EventID] {
+						if t.matchPolicies(deriv) == 0 {
 							_ = t.stats.EventsFiltered.Increment()
 							continue
 						}
 					}
 
-					// Process derived events
-					t.processEvent(event)
-					out <- event
-					timer += timetime.Since(stime)
-
+					t.processEvent(deriv)
+					out <- deriv
 				}
+				duration += timetime.Since(start)
+
+				eventPool.Put(eventCopy)
+
 			case <-ctx.Done():
 				return
 			}
