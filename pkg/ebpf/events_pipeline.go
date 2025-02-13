@@ -552,11 +552,9 @@ func (t *Tracee) deriveEvents(ctx context.Context, in <-chan *trace.Event) (
 				for i := range derivatives {
 					deriv := &derivatives[i]
 
-					if !t.derivationCache[deriv.EventID] {
-						if t.matchPolicies(deriv) == 0 {
-							_ = t.stats.EventsFiltered.Increment()
-							continue
-						}
+					if t.matchPolicies(deriv) == 0 {
+						_ = t.stats.EventsFiltered.Increment()
+						continue
 					}
 
 					t.processEvent(deriv)

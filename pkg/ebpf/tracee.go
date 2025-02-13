@@ -73,7 +73,6 @@ type Tracee struct {
 	eventProcessor   map[events.ID][]func(evt *trace.Event) error
 	eventDerivations derive.Table
 	derivationFlags  map[events.ID]bool
-	derivationCache  map[int]bool
 	// Artifacts
 	fileHashes     *filehash.Cache
 	capturedFiles  map[string]int64
@@ -584,38 +583,33 @@ func (t *Tracee) createDeriveEventsTable() derive.Table {
 	return derive.Table{
 		events.CgroupMkdir: {
 			{
-				TargetID:        events.CgroupMkdir,
-				DeriveFunction:  derive.ContainerCreate(t.containers),
-				SkipPolicyCheck: false,
+				TargetID:       events.CgroupMkdir,
+				DeriveFunction: derive.ContainerCreate(t.containers),
 			},
 		},
 		events.CgroupRmdir: {
 			{
-				TargetID:        events.CgroupRmdir,
-				DeriveFunction:  derive.ContainerRemove(t.containers),
-				SkipPolicyCheck: false,
+				TargetID:       events.CgroupRmdir,
+				DeriveFunction: derive.ContainerRemove(t.containers),
 			},
 		},
 
 		events.SyscallTableCheck: {
 			{
-				TargetID:        events.HookedSyscall,
-				DeriveFunction:  derive.DetectHookedSyscall(t.kernelSymbols),
-				SkipPolicyCheck: false,
+				TargetID:       events.HookedSyscall,
+				DeriveFunction: derive.DetectHookedSyscall(t.kernelSymbols),
 			},
 		},
 		events.PrintNetSeqOps: {
 			{
-				TargetID:        events.HookedSeqOps,
-				DeriveFunction:  derive.HookedSeqOps(t.kernelSymbols),
-				SkipPolicyCheck: false,
+				TargetID:       events.HookedSeqOps,
+				DeriveFunction: derive.HookedSeqOps(t.kernelSymbols),
 			},
 		},
 		events.HiddenKernelModuleSeeker: {
 			{
-				TargetID:        events.HiddenKernelModule,
-				DeriveFunction:  derive.HiddenKernelModule(),
-				SkipPolicyCheck: false,
+				TargetID:       events.HiddenKernelModule,
+				DeriveFunction: derive.HiddenKernelModule(),
 			},
 		},
 		events.SharedObjectLoaded: {
@@ -625,19 +619,16 @@ func (t *Tracee) createDeriveEventsTable() derive.Table {
 					t.contSymbolsLoader,
 					t.policyManager,
 				),
-				SkipPolicyCheck: false,
 			},
 			{
-				TargetID:        events.SymbolsCollision,
-				DeriveFunction:  derive.SymbolsCollision(t.contSymbolsLoader, t.policyManager),
-				SkipPolicyCheck: false,
+				TargetID:       events.SymbolsCollision,
+				DeriveFunction: derive.SymbolsCollision(t.contSymbolsLoader, t.policyManager),
 			},
 		},
 		events.SchedProcessExec: {
 			{
-				TargetID:        events.SymbolsCollision,
-				DeriveFunction:  derive.SymbolsCollision(t.contSymbolsLoader, t.policyManager),
-				SkipPolicyCheck: false,
+				TargetID:       events.SymbolsCollision,
+				DeriveFunction: derive.SymbolsCollision(t.contSymbolsLoader, t.policyManager),
 			},
 		},
 		events.SecuritySocketConnect: {
@@ -646,21 +637,18 @@ func (t *Tracee) createDeriveEventsTable() derive.Table {
 				DeriveFunction: derive.NetTCPConnect(
 					t.dnsCache,
 				),
-				SkipPolicyCheck: false,
 			},
 		},
 		events.ExecuteFinished: {
 			{
-				TargetID:        events.ProcessExecuteFailed,
-				DeriveFunction:  executeFailedGen.ProcessExecuteFailed(),
-				SkipPolicyCheck: false,
+				TargetID:       events.ProcessExecuteFailed,
+				DeriveFunction: executeFailedGen.ProcessExecuteFailed(),
 			},
 		},
 		events.ProcessExecuteFailedInternal: {
 			{
-				TargetID:        events.ProcessExecuteFailed,
-				DeriveFunction:  executeFailedGen.ProcessExecuteFailed(),
-				SkipPolicyCheck: false,
+				TargetID:       events.ProcessExecuteFailed,
+				DeriveFunction: executeFailedGen.ProcessExecuteFailed(),
 			},
 		},
 		//
@@ -668,76 +656,64 @@ func (t *Tracee) createDeriveEventsTable() derive.Table {
 		//
 		events.NetPacketIPBase: {
 			{
-				TargetID:        events.NetPacketIPv4,
-				DeriveFunction:  derive.NetPacketIPv4(),
-				SkipPolicyCheck: false,
+				TargetID:       events.NetPacketIPv4,
+				DeriveFunction: derive.NetPacketIPv4(),
 			},
 			{
-				TargetID:        events.NetPacketIPv6,
-				DeriveFunction:  derive.NetPacketIPv6(),
-				SkipPolicyCheck: false,
+				TargetID:       events.NetPacketIPv6,
+				DeriveFunction: derive.NetPacketIPv6(),
 			},
 		},
 		events.NetPacketTCPBase: {
 			{
-				TargetID:        events.NetPacketTCP,
-				DeriveFunction:  derive.NetPacketTCP(),
-				SkipPolicyCheck: false,
+				TargetID:       events.NetPacketTCP,
+				DeriveFunction: derive.NetPacketTCP(),
 			},
 		},
 		events.NetPacketUDPBase: {
 			{
-				TargetID:        events.NetPacketUDP,
-				DeriveFunction:  derive.NetPacketUDP(),
-				SkipPolicyCheck: false,
+				TargetID:       events.NetPacketUDP,
+				DeriveFunction: derive.NetPacketUDP(),
 			},
 		},
 		events.NetPacketICMPBase: {
 			{
-				TargetID:        events.NetPacketICMP,
-				DeriveFunction:  derive.NetPacketICMP(),
-				SkipPolicyCheck: false,
+				TargetID:       events.NetPacketICMP,
+				DeriveFunction: derive.NetPacketICMP(),
 			},
 		},
 		events.NetPacketICMPv6Base: {
 			{
-				TargetID:        events.NetPacketICMPv6,
-				DeriveFunction:  derive.NetPacketICMPv6(),
-				SkipPolicyCheck: false,
+				TargetID:       events.NetPacketICMPv6,
+				DeriveFunction: derive.NetPacketICMPv6(),
 			},
 		},
 		events.NetPacketDNSBase: {
 			{
-				TargetID:        events.NetPacketDNS,
-				DeriveFunction:  derive.NetPacketDNS(),
-				SkipPolicyCheck: false,
+				TargetID:       events.NetPacketDNS,
+				DeriveFunction: derive.NetPacketDNS(),
 			},
 			{
-				TargetID:        events.NetPacketDNSRequest,
-				DeriveFunction:  derive.NetPacketDNSRequest(),
-				SkipPolicyCheck: false,
+				TargetID:       events.NetPacketDNSRequest,
+				DeriveFunction: derive.NetPacketDNSRequest(),
 			},
 			{
-				TargetID:        events.NetPacketDNSResponse,
-				DeriveFunction:  derive.NetPacketDNSResponse(),
-				SkipPolicyCheck: false,
+				TargetID:       events.NetPacketDNSResponse,
+				DeriveFunction: derive.NetPacketDNSResponse(),
 			},
 		},
 		events.NetPacketHTTPBase: {
 			{
-				TargetID:        events.NetPacketHTTP,
-				DeriveFunction:  derive.NetPacketHTTP(),
-				SkipPolicyCheck: false,
+				TargetID:       events.NetPacketHTTP,
+				DeriveFunction: derive.NetPacketHTTP(),
 			},
 			{
-				TargetID:        events.NetPacketHTTPRequest,
-				DeriveFunction:  derive.NetPacketHTTPRequest(),
-				SkipPolicyCheck: false,
+				TargetID:       events.NetPacketHTTPRequest,
+				DeriveFunction: derive.NetPacketHTTPRequest(),
 			},
 			{
-				TargetID:        events.NetPacketHTTPResponse,
-				DeriveFunction:  derive.NetPacketHTTPResponse(),
-				SkipPolicyCheck: false,
+				TargetID:       events.NetPacketHTTPResponse,
+				DeriveFunction: derive.NetPacketHTTPResponse(),
 			},
 		},
 		//
@@ -749,14 +725,12 @@ func (t *Tracee) createDeriveEventsTable() derive.Table {
 				DeriveFunction: derive.NetFlowTCPBegin(
 					t.dnsCache,
 				),
-				SkipPolicyCheck: false,
 			},
 			events.NetFlowTCPEnd: {
 				TargetID: events.NetFlowTCPEnd,
 				DeriveFunction: derive.NetFlowTCPEnd(
 					t.dnsCache,
 				),
-				SkipPolicyCheck: false,
 			},
 		},
 	}
@@ -764,7 +738,6 @@ func (t *Tracee) createDeriveEventsTable() derive.Table {
 
 func (t *Tracee) initDerivationTable(deriveEventsTable derive.Table) error {
 	t.eventDerivations = make(derive.Table)
-	t.derivationCache = make(map[int]bool)
 	t.derivationFlags = make(map[events.ID]bool)
 
 	for srcEvent, targets := range deriveEventsTable {
@@ -772,12 +745,10 @@ func (t *Tracee) initDerivationTable(deriveEventsTable derive.Table) error {
 		for _, target := range targets {
 			if t.policyManager.IsEventToSubmit(target.TargetID) {
 				enabled = append(enabled, derive.Derivation{
-					TargetID:        target.TargetID,
-					DeriveFunction:  target.DeriveFunction,
-					SkipPolicyCheck: shouldSkipPolicyCheck(target.TargetID),
+					TargetID:       target.TargetID,
+					DeriveFunction: target.DeriveFunction,
 				})
 			}
-			t.derivationCache[int(target.TargetID)] = target.SkipPolicyCheck
 		}
 		if len(enabled) > 0 {
 			t.eventDerivations[srcEvent] = enabled
@@ -785,15 +756,6 @@ func (t *Tracee) initDerivationTable(deriveEventsTable derive.Table) error {
 		}
 	}
 	return nil
-}
-
-func shouldSkipPolicyCheck(id events.ID) bool {
-	switch id {
-	case events.SymbolsLoaded, events.SharedObjectLoaded, events.PrintMemDump:
-		return true
-	default:
-		return false
-	}
 }
 
 // options config should match defined values in ebpf code

@@ -20,9 +20,8 @@ type DeriveFunction func(trace.Event) ([]trace.Event, []error)
 type Table map[events.ID][]Derivation
 
 type Derivation struct {
-	TargetID        events.ID
-	DeriveFunction  DeriveFunction
-	SkipPolicyCheck bool
+	TargetID       events.ID
+	DeriveFunction DeriveFunction
 }
 
 // DeriveEvent takes a trace.Event and checks if it can derive additional events from it as defined by a derivationTable.
