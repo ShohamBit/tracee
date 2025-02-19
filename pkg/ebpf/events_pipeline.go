@@ -508,59 +508,86 @@ func (t *Tracee) deriveEvents(ctx context.Context, in <-chan *trace.Event) (
 ) {
 	out := make(chan *trace.Event, t.config.PipelineChannelSize)
 	errc := make(chan error, 1)
+
+	var eventPool = sync.Pool{
+		New: func() any { return new(trace.Event) },
+	}
+
+	timeWindow := 30 * timetime.Second // Define a 5-second time window (adjust as needed)
+	windowStartTime := timetime.Now()  // Start time of the current window
+	windowEventsCount := 0             // Count of events in the current window
+
 	go func() {
 		defer close(out)
 		defer close(errc)
 
-		var eventPool = sync.Pool{
-			New: func() any { return new(trace.Event) },
-		}
-
-		timeWindow := 30 * timetime.Second // Define a 5-second time window (adjust as needed)
-		windowStartTime := timetime.Now()  // Start time of the current window
-		windowEventsCount := 0             // Count of events in the current window
 		for {
-
 			select {
-			case origEvent := <-in:
-				windowEventsCount++ // Use new window-based counter
-				if origEvent == nil {
-					continue
+			case event := <-in:
+				if event == nil {
+					continue // might happen during initialization (ctrl+c seg faults)
 				}
+				windowEventsCount++ // Use new window-based counter
 
 				// Fast path check using precomputed flags
-				if !t.derivationFlags[events.ID(origEvent.EventID)] {
-					out <- origEvent
+				if !t.derivationFlags[events.ID(event.EventID)] {
+					out <- event
 					continue
 				}
+
+				// Get a copy of our event before sending it down the pipeline. This is
+				// needed because later modification of the event (in particular of the
+				// matched policies) can affect the derivation and later pipeline logic
+				// acting on the derived event.
 
 				// Pooled event copying
 				eventCopy := eventPool.Get().(*trace.Event)
-				*eventCopy = *origEvent
-				eventCopy.Args = slices.Clone(origEvent.Args)
+				*eventCopy = *event
 
-				// Process original first
-				out <- origEvent
+				// shallow clone the event arguments (new slice is created) before deriving the copy,
+				// to ensure the original event arguments are not modified by the derivation stage.
+				eventCopy.Args = slices.Clone(event.Args)
 
-				// Process derivations
-				derivatives, errors := t.eventDerivations.DeriveEvent(*eventCopy, origEvent.Args)
+				out <- event
+
+				// Note: event is being derived before any of its args are parsed.
+				derivatives, errors := t.eventDerivations.DeriveEvent(*eventCopy, eventCopy.Args)
 
 				for _, err := range errors {
 					t.handleError(err)
 				}
 
 				for i := range derivatives {
-					deriv := &derivatives[i]
+					// Passing "derivative" variable here will make the ptr address always
+					// be the same as the last item. This makes the printer to print 2 or
+					// 3 times the last derive, instead of printing all derived events
+					// (when there are more than one).
+					//
+					// Nadav: Likely related to https://github.com/golang/go/issues/57969 (GOEXPERIMENT=loopvar).
+					//        Let's keep an eye on that moving from experimental for these and similar cases in tracee.
+					derive := &derivatives[i]
 
-					if t.matchPolicies(deriv) == 0 {
-						_ = t.stats.EventsFiltered.Increment()
-						continue
+					// Use pooled event for the derivative
+					pooledEvt := t.eventsPool.Get().(*trace.Event)
+					*pooledEvt = *derive
+
+					// Skip events that dont work with filtering due to missing types
+					// being handled (https://github.com/aquasecurity/tracee/issues/2486)
+					switch events.ID(derivatives[i].EventID) {
+					case events.SymbolsLoaded:
+					case events.SharedObjectLoaded:
+					case events.PrintMemDump:
+					default:
+						// Derived events might need filtering as well
+						if t.matchPolicies(derive) == 0 {
+							t.eventsPool.Put(pooledEvt)
+							_ = t.stats.EventsFiltered.Increment()
+							continue
+						}
 					}
-
-					t.processEvent(deriv)
-					out <- deriv
+					t.processEvent(derive)
+					out <- derive
 				}
-
 				eventPool.Put(eventCopy)
 
 			case <-ctx.Done():
