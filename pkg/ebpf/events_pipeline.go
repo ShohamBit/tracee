@@ -4,11 +4,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
-	"fmt"
 	"slices"
 	"strconv"
 	"sync"
-	timetime "time"
 	"unsafe"
 
 	"github.com/aquasecurity/tracee/pkg/bufferdecoder"
@@ -513,10 +511,6 @@ func (t *Tracee) deriveEvents(ctx context.Context, in <-chan *trace.Event) (
 		New: func() any { return new(trace.Event) },
 	}
 
-	timeWindow := 30 * timetime.Second // Define a 5-second time window (adjust as needed)
-	windowStartTime := timetime.Now()  // Start time of the current window
-	windowEventsCount := 0             // Count of events in the current window
-
 	go func() {
 		defer close(out)
 		defer close(errc)
@@ -527,8 +521,6 @@ func (t *Tracee) deriveEvents(ctx context.Context, in <-chan *trace.Event) (
 				if event == nil {
 					continue // might happen during initialization (ctrl+c seg faults)
 				}
-				windowEventsCount++ // Use new window-based counter
-
 				// Fast path check using precomputed flags
 				if !t.derivationFlags[events.ID(event.EventID)] {
 					out <- event
@@ -592,14 +584,6 @@ func (t *Tracee) deriveEvents(ctx context.Context, in <-chan *trace.Event) (
 
 			case <-ctx.Done():
 				return
-			}
-			if timetime.Since(windowStartTime) >= timeWindow {
-				eventsPerSecond := float64(windowEventsCount) / timeWindow.Seconds()
-				fmt.Printf("performance: %.2f events/sec (over %v window)\n", eventsPerSecond, timeWindow)
-
-				// Reset for the next time window
-				windowEventsCount = 0
-				windowStartTime = timetime.Now()
 			}
 		}
 	}()
